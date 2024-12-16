@@ -1,6 +1,6 @@
 abstract type AbstractPauli{T<:Unsigned,Q} end
 Base.copy(p::AbstractPauli) = p
-Base.show(io::IO, p::AbstractPauli) = print(io, "Pauli(", tostring(p), ")")
+Base.show(io::IO, p::AbstractPauli{T}) where {T} = print(io, "Pauli{$T}(", tostring(p), ")")
 
 struct Pauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     string::T
@@ -47,8 +47,8 @@ function Pauli{T}(p::AbstractVector{<:Integer}) where {T}
     end
     Pauli{T,Q}(number)
 end
-Pauli(p::Union{<:AbstractString,<:AbstractVector{<:Integer}}) = Pauli{UInt}(p)
-Base.:(==)(p::Pauli, q::Pauli) = p.string == q.string
+Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = Pauli{UInt}(p)
+# Base.:(==)(p::Pauli, q::Pauli) = p.string == q.string
 
 function tostring(p::Pauli)::String
     result = ""
@@ -63,13 +63,6 @@ function tostring(p::Pauli)::String
         else
             result = "-" * result
         end
-    end
-    return result
-end
-function tostring(paulis::Vector{<:AbstractPauli})::Vector{String}
-    result = Vector{String}(undef, length(paulis))
-    for (i,p) in pairs(paulis)
-        result[i] = tostring(p)
     end
     return result
 end
@@ -97,15 +90,15 @@ SignedPauli{T}(p::Pauli, sign::Number) where {T} = SignedPauli{T,p.qubits}(p.str
 SignedPauli(p::Pauli{T,Q}, sign::Number) where {T,Q} = SignedPauli{T,Q}(p.string, C8(sign))
 SignedPauli{T}(p::SignedPauli) where {T} = SignedPauli{T,p.qubits}(p.string, p.sign)
 SignedPauli(p::SignedPauli) = p
-SignedPauli{T}(p::Union{<:AbstractString,<:AbstractVector{<:Integer}}) where {T} = SignedPauli(Pauli{T}(p))
-SignedPauli(p::Union{<:AbstractString,<:AbstractVector{<:Integer}}) = SignedPauli(Pauli(p))
-SignedPauli{T}(p::Union{<:AbstractString,<:AbstractVector{<:Integer}}, sign::Number) where {T} = SignedPauli(Pauli{T}(p), sign)
-SignedPauli(p::Union{<:AbstractString,<:AbstractVector{<:Integer}}, sign::Number) = SignedPauli(Pauli(p), sign)
-Base.:(==)(p1::SignedPauli, p2::SignedPauli) = p1.string == p2.string & p1.sign == p2.sign
+SignedPauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}) where {T} = SignedPauli(Pauli{T}(p))
+SignedPauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = SignedPauli(Pauli(p))
+SignedPauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) where {T} = SignedPauli(Pauli{T}(p), sign)
+SignedPauli(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) = SignedPauli(Pauli(p), sign)
+# Base.:(==)(p1::SignedPauli, p2::SignedPauli) = p1.string == p2.string & p1.sign == p2.sign
 
 function tostring(p::SignedPauli)::String
-    p.sign == 1 && return "+" * tostring(Pauli(p))
-    p.sign == -1 && return "-" * tostring(Pauli(p))
-    p.sign == 1im && return "i" * tostring(Pauli(p))
-    p.sign == -1im && return "-i" * tostring(Pauli(p))
+    p.sign == 1 && return "(+)" * tostring(Pauli(p))
+    p.sign == -1 && return "(-)" * tostring(Pauli(p))
+    p.sign == 1im && return "(i)" * tostring(Pauli(p))
+    p.sign == -1im && return "(-i)" * tostring(Pauli(p))
 end

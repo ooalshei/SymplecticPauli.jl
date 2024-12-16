@@ -1,6 +1,8 @@
-struct PauliSentence{T<:Number} <: AbstractVector{T}
-    sentence::Vector{<:Union{T,Missing}}
-    PauliSentence{T}(sentence) where {T} =  new{T}(copy(sentence))
+const NumOrMiss = Union{Number,Missing}
+
+struct PauliSentence{T<:NumOrMiss} <: AbstractVector{T}
+    sentence::Vector{T}
+    PauliSentence{T}(sentence) where {T} = isinteger(log2(length(sentence)) / 2) ? new{T}(copy(sentence)) : throw(ArgumentError("Length of PauliSentence must be a power of 4."))
 end
 Base.axes(s::PauliSentence) = (ZeroTo(length(s)),)
 Base.size(s::PauliSentence) = size(s.sentence)
@@ -21,44 +23,28 @@ Base.similar(s::PauliSentence, ::Type{T}, shape::Tuple{ZeroTo,Vararg{ZeroTo}}) w
 Base.similar(s::PauliSentence, ::Type{T}, m::Int) where {T} = PauliSentence(similar(s.sentence, T, m))
 # Base.similar(::Type{T}, shape::Tuple{ZeroTo,Vararg{ZeroTo}}) where {T<:PauliSentence} = similar(T, Base.to_shape(shape))
 
-PauliSentence(coeffs::AbstractVector{<:Union{Missing,T}}) where {T<:Number} = PauliSentence{T}(Vector{Union{Missing,T}}(coeffs))
-function PauliSentence{T}(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{<:Number}, qubits::Integer) where {T}
-    length(paulis) == length(coeffs) || throw(DimensionMismatch("Length of paulis and coeffs must be the same."))
-    max(paulis) < 4^qubits || throw(ArgumentError("Pauli string must not exceed $(4^qubits - 1)."))
-    sentence = Vector{<:Union{T,Missing}}(missing, 4^length(qubits))
-    for (p, coeff) in zip(paulis, coeffs)
-        sentence[p+1] = coeff
-    end
+PauliSentence(coeffs::AbstractVector{T}) where {T<:NumOrMiss} = PauliSentence{T}(Vector(coeffs))
+function PauliSentence{T}(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{<:NumOrMiss}, qubits::Integer) where {T}
+    # length(paulis) == length(coeffs) || throw(DimensionMismatch("Length of paulis and coeffs must be the same."))
+    maximum(paulis) < 4^qubits || throw(ArgumentError("Pauli string must not exceed $(4^qubits - 1)."))
+    sentence = Vector{Union{T,Missing}}(missing, 4^qubits)
+    sentence[paulis.+1] = coeffs
     return PauliSentence{T}(sentence)
 end
-PauliSentence(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{T}, qubits::Integer) where {T<:Number} = PauliSentence{T}(paulis, coeffs, qubits)
-function PauliSentence{T}(paulis::AbstractVector{<:Pauli}, coeffs::AbstractVector{<:Number}) where {T}
-    length(paulis) == length(coeffs) || throw(DimensionMismatch("Length of paulis and coeffs must be the same."))
-    sentence = Vector{<:Union{T,Missing}}(missing, 4^length(paulis[1].qubits))
-    for (p, coeff) in zip(paulis, coeffs)
-        sentence[p.string+1] = coeff
-    end
-    return PauliSentence{T}(sentence)
-end
-PauliSentence(paulis::AbstractVector{<:Pauli}, coeffs::AbstractVector{T}) where {T<:Number} = PauliSentence{T}(paulis, coeffs)
-function PauliSentence{T}(paulis::AbstractVector{<:Union{<:AbstractString,<:AbstractVector{<:Integer}}}, coeffs::AbstractVector{<:Number}) where {T}
-    length(paulis) == length(coeffs) || throw(DimensionMismatch("Length of paulis and coeffs must be the same."))
-    sentence = Vector{<:Union{T,Missing}}(missing, 4^length(paulis[1]))
-    for (p, coeff) in zip(paulis, coeffs)
-        sentence[Pauli(p).string+1] = coeff
-    end
-    return PauliSentence{T}(sentence)
-end
-PauliSentence(paulis::AbstractVector{<:Union{<:AbstractString,<:AbstractVector{<:Integer}}}, coeffs::AbstractVector{T}) where {T<:Number} = PauliSentence{T}(paulis, coeffs)
-PauliSentence{T}(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{<:Number}) where {T} = PauliSentence{T}(eachcol(paulis), coeffs)
-PauliSentence(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{T}) where {T<:Number} = PauliSentence{T}(eachcol(paulis), coeffs)
-PauliSentence{T}(paulis::AbstractDict{<:Union{<:Unsigned,<:Pauli,<:AbstractString,<:AbstractVector{<:Integer}},<:Number}) where {T} = PauliSentence{T}(keys(paulis), values(paulis))
-PauliSentence(paulis::AbstractDict{<:Union{<:Unsigned,<:Pauli,<:AbstractString,<:AbstractVector{<:Integer}},T}) where {T<:Number} = PauliSentence{T}(keys(paulis), values(paulis))
+PauliSentence(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{T}, qubits::Integer) where {T<:NumOrMiss} = PauliSentence{T}(paulis, coeffs, qubits)
+PauliSentence{T}(paulis::AbstractVector{<:Pauli{<:Unsigned,Q}}, coeffs::AbstractVector{<:NumOrMiss}) where {T,Q} = PauliSentence{T}([p.string for p in paulis], coeffs, Q)
+PauliSentence(paulis::AbstractVector{<:Pauli}, coeffs::AbstractVector{T}) where {T<:NumOrMiss} = PauliSentence{T}(paulis, coeffs)
+PauliSentence{T}(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{<:NumOrMiss}) where {T} = PauliSentence{T}(Pauli.(paulis), coeffs)
+PauliSentence(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{T}) where {T<:NumOrMiss} = PauliSentence{T}(paulis, coeffs)
+PauliSentence{T}(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{<:NumOrMiss}) where {T} = PauliSentence{T}(eachcol(paulis), coeffs)
+PauliSentence(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{T}) where {T<:NumOrMiss} = PauliSentence{T}(eachcol(paulis), coeffs)
+PauliSentence{T}(paulis::AbstractDict{<:Union{Unsigned,Pauli,AbstractString,AbstractVector{<:Integer}},<:NumOrMiss}) where {T} = PauliSentence{T}(keys(paulis), values(paulis))
+PauliSentence(paulis::AbstractDict{<:Union{Unsigned,Pauli,AbstractString,AbstractVector{<:Integer}},T}) where {T<:NumOrMiss} = PauliSentence{T}(keys(paulis), values(paulis))
 PauliSentence{T}(s::PauliSentence) where {T} = PauliSentence{T}(s.sentence)
 PauliSentence(s::PauliSentence{T}) where {T} = copy(s)
 
 function tostring(s::PauliSentence{T})::Dict{String,T} where {T}
-    qubits = Integer(log(4, length(s)))
+    qubits = Int(log2(length(s)) / 2)
     result = Dict{String,T}()
     for (key, value) in pairs(skipmissing(s))
         result[tostring(Pauli(UInt(key), qubits))] = value
