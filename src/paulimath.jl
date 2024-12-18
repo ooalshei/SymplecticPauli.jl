@@ -1,4 +1,4 @@
-const SIGNS = C8[1, 1im, -1, -1im]
+# const SIGNS = C8[1, 1im, -1, -1im]
 
 function Base.:*(scalar::Number, p::AbstractPauli)
     typeof(p) <: Pauli && return SignedPauli(p, C8(scalar))
@@ -40,14 +40,17 @@ function Base.:*(p::AbstractPauli{T,Q}, q::AbstractPauli{U,Q})::SignedPauli{<:Un
     a2 = q.string & amask
     b2 = (q.string & bmask) >> Q
 
-    overlap = count_ones((a1 | b1) & (a2 | b2))
-    signstring = ((b1 & a1) & (~b2 & a2)) | ((b1 & ~a1) & (b2 & a2)) | ((~b1 & a1) & (b2 & ~a2))
-    equalpaulis = (a1 & a2 & ~b1 & ~b2) | (a1 & b1 & a2 & b2) | (~a1 & ~a2 & b1 & b2)
-
-    ind = (overlap - count_ones(equalpaulis)) % 4 + 1
-    sign = SIGNS[ind] * SignedPauli(p).sign * SignedPauli(q).sign
-    isodd(count_ones(signstring)) && (sign *= C8(-1))
-    return SignedPauli(p.string ⊻ q.string, sign)
+    # overlap = count_ones((a1 | b1) & (a2 | b2))
+    # signstring = ((b1 & a1) & (~b2 & a2)) | ((b1 & ~a1) & (b2 & a2)) | ((~b1 & a1) & (b2 & ~a2))
+    # equalpaulis = (a1 & a2 & ~b1 & ~b2) | (a1 & b1 & a2 & b2) | (~a1 & ~a2 & b1 & b2)
+    # ind = (overlap - count_ones(equalpaulis)) % 4 + 1
+    # sign = SIGNS[ind] * SignedPauli(p).sign * SignedPauli(q).sign
+    # isodd(count_ones(signstring)) && (sign *= C8(-1))
+    result = p.string ⊻ q.string
+    a = result & amask
+    b = (result & bmask) >> Q
+    sign::C8 = (-1im)^count_ones(a & b) * (1im)^count_ones(a1 & b1) * SignedPauli(p).sign * (1im)^count_ones(a2 & b2) * SignedPauli(q).sign * (-1)^count_ones(b1 & a2)
+    return SignedPauli(result, sign, Q)
 end
 function _symplectic_prod(p::Unsigned, q::Unsigned, Q::Integer)
     amask::UInt = 2^Q - 1
@@ -57,13 +60,16 @@ function _symplectic_prod(p::Unsigned, q::Unsigned, Q::Integer)
     a2 = q & amask
     b2 = (q & bmask) >> Q
 
-    overlap = count_ones((a1 | b1) & (a2 | b2))
-    signstring = ((b1 & a1) & (~b2 & a2)) | ((b1 & ~a1) & (b2 & a2)) | ((~b1 & a1) & (b2 & ~a2))
-    equalpaulis = (a1 & a2 & ~b1 & ~b2) | (a1 & b1 & a2 & b2) | (~a1 & ~a2 & b1 & b2)
-
-    ind = (overlap - count_ones(equalpaulis)) % 4 + 1
-    sign = SIGNS[ind]
-    isodd(count_ones(signstring)) && (sign *= C8(-1))
+    # overlap = count_ones((a1 | b1) & (a2 | b2))
+    # signstring = ((b1 & a1) & (~b2 & a2)) | ((b1 & ~a1) & (b2 & a2)) | ((~b1 & a1) & (b2 & ~a2))
+    # equalpaulis = (a1 & a2 & ~b1 & ~b2) | (a1 & b1 & a2 & b2) | (~a1 & ~a2 & b1 & b2)
+    # ind = (overlap - count_ones(equalpaulis)) % 4 + 1
+    # sign = SIGNS[ind]
+    # isodd(count_ones(signstring)) && (sign *= C8(-1))
+    result = p.string ⊻ q.string
+    a = result & amask
+    b = (result & bmask) >> Q
+    sign::C8 = (-1im)^count_ones(a & b) * (1im)^count_ones(a1 & b1) * (1im)^count_ones(a2 & b2) * (-1)^count_ones(b1 & a2)
     return p ⊻ q => sign
 end
 
