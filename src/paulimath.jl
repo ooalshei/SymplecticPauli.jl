@@ -52,8 +52,8 @@ function Base.:*(p::AbstractPauli{T,Q}, q::AbstractPauli{U,Q})::SignedPauli{<:Un
     sign::C8 = (-1im)^count_ones(a & b) * (1im)^count_ones(a1 & b1) * SignedPauli(p).sign * (1im)^count_ones(a2 & b2) * SignedPauli(q).sign * (-1)^count_ones(b1 & a2)
     return SignedPauli(result, sign, Q)
 end
-function _symplectic_prod(p::Unsigned, q::Unsigned, Q::Integer)
-    amask::UInt = 2^Q - 1
+function _symplectic_prod(p::T, q::T, Q::Integer) where {T<:Unsigned}
+    amask::T = 2^Q - 1
     bmask = ~amask
     a1 = p & amask
     b1 = (p & bmask) >> Q
@@ -85,42 +85,19 @@ function Base.:*(A::PauliSentence, B::PauliSentence)
     return replace(result, zero(ComplexF64) => missing)
 end
 
-function ad(s::PauliSentence, generator::Pauli{<:Unsigned,Q}, angle::Real; atol::Real=0) where {Q}
-    length(s) == 4^Q || throw(DimensionMismatch("PauliSentence must have length $(4^Q)"))
-    result = copy(s)
-    (iszero(angle) | iszero(generator.string)) && return result
-    sentence = skipmissing(s)
-    products = _symplectic_prod.(generator.string, UInt.(eachindex(sentence)), Q)
-    noncomind = findall(p -> !isreal(p.second), products)
-    noncomkeys = @view collect(eachindex(sentence))[noncomind]
-    noncomprods = @view products[noncomind]
-    vals = @view collect(sentence)[noncomind]
-    result[noncomkeys] = cos(2 * angle) * vals
-    result[first.(noncomprods)] = replace!(@view(result[first.(noncomprods)]), missing => 0.0) .+ sin(2 * angle) .* -imag(last.(noncomprods)) .* vals
-    return replace(x -> (ismissing(x) || abs(x) <= atol ? missing : x), result)
-end
-function ad(s::PauliSentence, generator::Pauli{<:Unsigned,Q}, cosine::Real, sine::Real; atol::Real=0) where {Q}
+function ad(s::PauliSentence, generator::Pauli{T,Q}, cosine::Real, sine::Real; atol::Real=0) where {T,Q}
     length(s) == 4^Q || throw(DimensionMismatch("PauliSentence must have length $(4^Q)"))
     result = copy(s)
     (iszero(sine) | iszero(generator.string)) && return result
     sentence = skipmissing(s)
-    products = _symplectic_prod.(generator.string, UInt.(eachindex(sentence)), Q)
+    products = _symplectic_prod.(generator.string, T.(eachindex(sentence)), Q)
     noncomind = findall(p -> !isreal(p.second), products)
     noncomkeys = @view collect(eachindex(sentence))[noncomind]
     noncomprods = @view products[noncomind]
     vals = @view collect(sentence)[noncomind]
     result[noncomkeys] = cosine * vals
-    result[first.(noncomprods)] = replace!(@view(result[first.(noncomprods)]), missing => 0.0) .+ sine .* -imag(last.(noncomprods)) .* vals
+    result[first.(noncomprods)] = replace!(@view(result[first.(noncomprods)]), missing => 0) .+ sine .* -imag(last.(noncomprods)) .* vals
     return replace(x -> (ismissing(x) || abs(x) <= atol ? missing : x), result)
-end
-function ad(s::PauliSentence, generators::AbstractVector{<:Pauli}, angles::AbstractVector{<:Real}; atol::Real=0)
-    length(generators) == length(angles) || throw(DimensionMismatch("Generators and angles need to be equal size ($(length(generators)) and $(length(angles)))"))
-    result = copy(s)
-    length(angles) == 0 && return result
-    for (generator, angle) in zip(reverse(generators), reverse(angles))
-        result = ad(result, generator, angle, atol=atol)
-    end
-    return result
 end
 function ad(s::PauliSentence, generators::AbstractVector{<:Pauli}, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
     length(generators) == length(cosines) == length(sines) || throw(DimensionMismatch("Generators and angles need to be equal size ($(length(generators)), $(length(cosines)), $(length(sines)))"))
@@ -131,3 +108,5 @@ function ad(s::PauliSentence, generators::AbstractVector{<:Pauli}, cosines::Abst
     end
     return result
 end
+ad(s::PauliSentence, generator::Pauli, angle::Real; atol::Real=0) = ad(s, generator, cos(2 * angle), sin(2 * angle), atol=atol)
+ad(s::PauliSentence, generators::AbstractVector{<:Pauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
