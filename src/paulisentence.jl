@@ -38,8 +38,8 @@ PauliSentence{T}(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:
 PauliSentence(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{T}) where {T<:NumOrMiss} = PauliSentence{T}(paulis, coeffs)
 PauliSentence{T}(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{<:NumOrMiss}) where {T} = PauliSentence{T}(eachcol(paulis), coeffs)
 PauliSentence(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{T}) where {T<:NumOrMiss} = PauliSentence{T}(eachcol(paulis), coeffs)
-PauliSentence{T}(paulis::AbstractDict{<:Union{Unsigned,Pauli,AbstractString,AbstractVector{<:Integer}},<:NumOrMiss}) where {T} = PauliSentence{T}(keys(paulis), values(paulis))
-PauliSentence(paulis::AbstractDict{<:Union{Unsigned,Pauli,AbstractString,AbstractVector{<:Integer}},T}) where {T<:NumOrMiss} = PauliSentence{T}(keys(paulis), values(paulis))
+PauliSentence{T}(paulis::AbstractDict{<:Union{Unsigned,Pauli,AbstractString,AbstractVector{<:Integer}},<:NumOrMiss}) where {T} = PauliSentence{T}(collect(keys(paulis)), collect(values(paulis)))
+PauliSentence(paulis::AbstractDict{<:Union{Unsigned,Pauli,AbstractString,AbstractVector{<:Integer}},T}) where {T<:NumOrMiss} = PauliSentence{T}(collect(keys(paulis)), collect(values(paulis)))
 PauliSentence{T}(s::PauliSentence) where {T} = PauliSentence{T}(s.sentence)
 PauliSentence(s::PauliSentence{T}) where {T} = copy(s)
 
