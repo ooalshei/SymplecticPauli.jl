@@ -66,7 +66,7 @@ function _symplectic_prod(p::T, q::T, Q::Integer) where {T<:Unsigned}
     # ind = (overlap - count_ones(equalpaulis)) % 4 + 1
     # sign = SIGNS[ind]
     # isodd(count_ones(signstring)) && (sign *= C8(-1))
-    result = p.string ⊻ q.string
+    result = p ⊻ q
     a = result & amask
     b = (result & bmask) >> Q
     sign::C8 = (-1im)^count_ones(a & b) * (1im)^count_ones(a1 & b1) * (1im)^count_ones(a2 & b2) * (-1)^count_ones(b1 & a2)
