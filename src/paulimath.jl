@@ -47,18 +47,16 @@ function Base.:*(p::AbstractPauli{<:Unsigned,Q}, q::AbstractPauli{<:Unsigned,Q})
     # sign = SIGNS[ind] * Pauli(p).sign * Pauli(q).sign
     # isodd(count_ones(signstring)) && (sign *= C8(-1))
     result = p.string ⊻ q.string
-    a = result & amask
-    b = (result & bmask) >> Q
-    sign::C8 = (-1im)^count_ones(a & b) * (1im)^count_ones(a1 & b1) * SignedPauli(p).sign * (1im)^count_ones(a2 & b2) * SignedPauli(q).sign * (-1)^count_ones(b1 & a2)
-    return SignedPauli(result, sign, Q)
+    sign::C8 = Pauli(p).sign * Pauli(q).sign * (-1)^count_ones(b1 & q)
+    return Pauli(result, sign, Q)
 end
 function _symplectic_prod(p::T, q::T, Q::Integer) where {T<:Unsigned}
-    amask::T = 2^Q - 1
-    bmask = ~amask
-    a1 = p & amask
-    b1 = (p & bmask) >> Q
-    a2 = q & amask
-    b2 = (q & bmask) >> Q
+    # mask::T = 2^Q - 1
+    # bmask = ~amask
+    # a1 = p & amask
+    b1 = p >> Q
+    # a2 = q & mask
+    # b2 = (q & bmask) >> Q
 
     # overlap = count_ones((a1 | b1) & (a2 | b2))
     # signstring = ((b1 & a1) & (~b2 & a2)) | ((b1 & ~a1) & (b2 & a2)) | ((~b1 & a1) & (b2 & ~a2))
@@ -66,40 +64,47 @@ function _symplectic_prod(p::T, q::T, Q::Integer) where {T<:Unsigned}
     # ind = (overlap - count_ones(equalUPaulis)) % 4 + 1
     # sign = SIGNS[ind]
     # isodd(count_ones(signstring)) && (sign *= C8(-1))
-    result = p ⊻ q
-    a = result & amask
-    b = (result & bmask) >> Q
-    sign::C8 = (-1im)^count_ones(a & b) * (1im)^count_ones(a1 & b1) * (1im)^count_ones(a2 & b2) * (-1)^count_ones(b1 & a2)
-    return p ⊻ q => sign
+    # a = result & amask
+    # b = (result & bmask) >> Q
+    return p ⊻ q => C8(-1)^count_ones(b1 & q)
 end
 
-function Base.:*(A::PauliSentence, B::PauliSentence)
-    length(A) == length(B) || throw(DimensionMismatch("PauliSentences must have the same length."))
-    strings = skipmissing(B)
-    result = PauliSentence(zeros(ComplexF64, length(A)))
-    Q = Int(log2(length(A)) ÷ 2)
-    for (key, value) in pairs(skipmissing(A))
-        products = _symplectic_prod.(UInt(key), UInt.(keys(strings)), Q)
-        result[first.(products)] += value .* last.(products) .* values(strings)
+Base.:+(s::PauliSentence{<:Unsigned,<:Number,Q}, r::PauliSentence{<:Unsigned,<:Number,Q}...) where {Q} = PauliSentence(mergewith(+, s, r...), Q)
+Base.:-(s::PauliSentence{<:Unsigned,<:Number,Q}, r::PauliSentence{<:Unsigned,<:Number,Q}) where {Q} = PauliSentence(mergewith(-, s, r), Q)
+
+function Base.:*(c::N, s::PauliSentence{T,Ns,Q}) where {T,N,Ns,Q}
+    result = PauliSentence{T,promote_type(N,Ns)}(s)
+    for key in keys(result)
+        result[key] *= c
     end
-    return replace(result, zero(ComplexF64) => missing)
+    return result
+end
+Base.:*(s::PauliSentence, c::Number) = c * s
+
+function Base.:*(s::PauliSentence{Ts,<:Number,Q}, r::PauliSentence{Tr,<:Number,Q}) where {Ts,Tr,Q}
+    result = PauliSentence(Dict{promote_type(Ts, Tr), ComplexF64}(), Q)
+    for (key1, value1) in s
+        for (key2, value2) in r
+            string = _symplectic_prod(key1, key2, Q)
+            haskey(result, string.first) ? result[string.first] += string.second * value1 * value2 : result[key] = string.second * value1 * value2
+        end
+    end
+    return result
 end
 
-function ad(s::PauliSentence, generator::Pauli{T,Q}, cosine::Real, sine::Real; atol::Real=0) where {T,Q}
-    length(s) == 4^Q || throw(DimensionMismatch("PauliSentence must have length $(4^Q)"))
-    result = copy(s)
+function ad(s::PauliSentence{Ts,<:Number,Q}, generator::UPauli{T,Q}, cosine::Real, sine::Real; atol::Real=0) where {Ts,T,Q}
+    result = PauliSentence{promote_type(T, Ts),ComplexF64,Q}(s)
     (iszero(sine) | iszero(generator.string)) && return result
-    sentence = skipmissing(s)
-    products = _symplectic_prod.(generator.string, T.(eachindex(sentence)), Q)
-    noncomind = findall(p -> !isreal(p.second), products)
-    noncomkeys = @view collect(eachindex(sentence))[noncomind]
-    noncomprods = @view products[noncomind]
-    vals = @view collect(sentence)[noncomind]
-    result[noncomkeys] = cosine * vals
-    result[first.(noncomprods)] = replace!(@view(result[first.(noncomprods)]), missing => 0) .+ sine .* -imag(last.(noncomprods)) .* vals
-    return replace(x -> (ismissing(x) || abs(x) <= atol ? missing : x), result)
+    for (key, value) in s
+        string = _symplectic_prod(generator.string, key, Q)
+        if string.second != _symplectic_prod(key, generator.string, Q).second
+            result[key] += (cosine - 1) * value
+            haskey(result, string.first) ? result[string.first] += im * sine * string.second * value : result[string.first] = im * sine * string.second * value 
+        end
+    end
+    return filter!(p->(abs(p.second) > atol), result)
 end
-function ad(s::PauliSentence, generators::AbstractVector{<:Pauli}, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
+function ad(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
     length(generators) == length(cosines) == length(sines) || throw(DimensionMismatch("Generators and angles need to be equal size ($(length(generators)), $(length(cosines)), $(length(sines)))"))
     result = copy(s)
     length(generators) == 0 && return result
@@ -108,5 +113,15 @@ function ad(s::PauliSentence, generators::AbstractVector{<:Pauli}, cosines::Abst
     end
     return result
 end
-ad(s::PauliSentence, generator::Pauli, angle::Real; atol::Real=0) = ad(s, generator, cos(2 * angle), sin(2 * angle), atol=atol)
-ad(s::PauliSentence, generators::AbstractVector{<:Pauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
+function ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
+    length(generators) == length(cosines) == length(sines) || throw(DimensionMismatch("Generators and angles need to be equal size ($(length(generators)), $(length(cosines)), $(length(sines)))"))
+    length(generators) == 0 && return s
+    for (generator, cosine, sine) in zip(reverse(generators), reverse(cosines), reverse(sines))
+        ad!(s, generator, cosine, sine, atol=atol)
+    end
+    return s
+end
+ad(s::PauliSentence, generator::UPauli, angle::Real; atol::Real=0) = ad(s, generator, cos(2 * angle), sin(2 * angle), atol=atol)
+ad!(s::PauliSentence, generator::UPauli, angle::Real; atol::Real=0) = ad!(s, generator, cos(2 * angle), sin(2 * angle), atol=atol)
+ad(s::PauliSentence, generators::AbstractVector{<:UPauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
+ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad!(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
