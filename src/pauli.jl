@@ -1,17 +1,19 @@
 abstract type AbstractPauli{T<:Unsigned,Q} end
 Base.copy(p::AbstractPauli) = p
 Base.show(io::IO, p::AbstractPauli{T}) where {T} = print(io, "Pauli{$T}(", tostring(p), ")")
+toint(p::AbstractPauli) = p.string
+toint(::Type{T}, p::AbstractPauli) where {T<:Integer} = T(p.string)
 
-struct Pauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
+struct UPauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     string::T
     qubits::Integer
-    Pauli{T,Q}(string) where {T,Q} = string > (4^Q - 1) ? throw(ArgumentError("String must not exceed $(4^Q - 1).")) : new{T,Q}(string, Q)
+    UPauli{T,Q}(string::Integer) where {T,Q} = string > (4^Q - 1) ? throw(ArgumentError("String must not exceed $(4^Q - 1).")) : new{T,Q}(string, Q)
 end
-Pauli(string::T, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string)
-# Pauli{T,Q}(p::AbstractPauli) where {T,Q} = Pauli{T,Q}(p.string)
-Pauli{T}(p::AbstractPauli) where {T} = Pauli{T,p.qubits}(p.string)
-Pauli(p::AbstractPauli{T,Q}) where {T,Q} = Pauli{T,Q}(p.string)
-function Pauli{T}(p::AbstractString) where {T}
+UPauli(string::T, Q::Integer) where {T<:Unsigned} = UPauli{T,Q}(string)
+# UPauli{T,Q}(p::AbstractPauli) where {T,Q} = UPauli{T,Q}(p.string)
+UPauli{T}(p::AbstractPauli) where {T} = UPauli{T,p.qubits}(p.string)
+UPauli(p::AbstractPauli{T,Q}) where {T,Q} = UPauli{T,Q}(p.string)
+function UPauli{T}(p::AbstractString) where {T}
     unique(p) ⊆ ['X', 'Y', 'Z', 'I', '-'] || throw(ArgumentError("String must contain only 'X', 'Y', 'Z', 'I', or '-'."))
     Q = length(p)
     Base.hastypemax(T) && typemax(T) < 4^Q && throw(ArgumentError("String length cannot exceed $(count_ones(typemax(T)) ÷ 2)). Consider using a larger unsigned integer type."))
@@ -27,9 +29,9 @@ function Pauli{T}(p::AbstractString) where {T}
             number |= 1
         end
     end
-    return Pauli{T,Q}(number)
+    return UPauli{T,Q}(number)
 end
-function Pauli{T}(p::AbstractVector{<:Integer}) where {T}
+function UPauli{T}(p::AbstractVector{<:Integer}) where {T}
     unique(p) ⊆ [1, 2, 3, 4] || throw(ArgumentError("Array must contain only 1, 2, 3, or 4."))
     Q = length(p)
     Base.hastypemax(T) && typemax(T) < 4^Q && throw(ArgumentError("Array length cannot exceed $(count_ones(typemax(T)) ÷ 2)). Consider using a larger unsigned integer type."))
@@ -45,12 +47,12 @@ function Pauli{T}(p::AbstractVector{<:Integer}) where {T}
             number |= 1
         end
     end
-    Pauli{T,Q}(number)
+    UPauli{T,Q}(number)
 end
-Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = Pauli{UInt}(p)
-# Base.:(==)(p::Pauli, q::Pauli) = p.string == q.string
+UPauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = UPauli{UInt}(p)
+# Base.:(==)(p::UPauli, q::UPauli) = p.string == q.string
 
-function tostring(p::Pauli)::String
+function tostring(p::UPauli)::String
     result = ""
     string = digits(p.string, base=2, pad=2*p.qubits)
     for i in 1:p.qubits
@@ -67,11 +69,11 @@ function tostring(p::Pauli)::String
     return result
 end
 
-struct SignedPauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
+struct Pauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     string::T
     sign::C8
     qubits::Integer
-    function SignedPauli{T,Q}(string, sign) where {T,Q}
+    function Pauli{T,Q}(string::Integer, sign::Number) where {T,Q}
         if string > (4^Q - 1)
             throw(ArgumentError("String must be of length $(4^Q - 1) or less."))
         elseif !(sign in Set([1, -1, im, -im]))
@@ -81,24 +83,25 @@ struct SignedPauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
         end
     end
 end
-SignedPauli(string::T, sign::Number, Q::Integer) where {T<:Unsigned} = SignedPauli{T,Q}(string, C8(sign))
-SignedPauli{T,Q}(string::Unsigned) where {T,Q} = SignedPauli{T,Q}(string, C8(1))
-SignedPauli(string::T, Q::Integer) where {T<:Unsigned} = SignedPauli{T,Q}(string, C8(1))
-SignedPauli{T}(p::Pauli) where {T} = SignedPauli{T,p.qubits}(p.string, C8(1))
-SignedPauli(p::Pauli{T,Q}) where {T,Q} = SignedPauli{T,Q}(p.string, C8(1))
-SignedPauli{T}(p::Pauli, sign::Number) where {T} = SignedPauli{T,p.qubits}(p.string, C8(sign))
-SignedPauli(p::Pauli{T,Q}, sign::Number) where {T,Q} = SignedPauli{T,Q}(p.string, C8(sign))
-SignedPauli{T}(p::SignedPauli) where {T} = SignedPauli{T,p.qubits}(p.string, p.sign)
-SignedPauli(p::SignedPauli) = p
-SignedPauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}) where {T} = SignedPauli(Pauli{T}(p))
-SignedPauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = SignedPauli(Pauli(p))
-SignedPauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) where {T} = SignedPauli(Pauli{T}(p), sign)
-SignedPauli(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) = SignedPauli(Pauli(p), sign)
-# Base.:(==)(p1::SignedPauli, p2::SignedPauli) = p1.string == p2.string & p1.sign == p2.sign
+Pauli(string::T, sign::Number, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string, C8(sign))
+Pauli{T,Q}(string::Unsigned) where {T,Q} = Pauli{T,Q}(string, 1)
+Pauli(string::T, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string, 1)
+Pauli{T}(p::UPauli) where {T} = Pauli{T,p.qubits}(p.string, 1)
+Pauli(p::UPauli{T,Q}) where {T,Q} = Pauli{T,Q}(p.string, 1)
+Pauli{T}(p::UPauli, sign::Number) where {T} = Pauli{T,p.qubits}(p.string, C8(sign))
+Pauli(p::UPauli{T,Q}, sign::Number) where {T,Q} = Pauli{T,Q}(p.string, C8(sign))
+Pauli{T}(p::Pauli) where {T} = Pauli{T,p.qubits}(p.string, p.sign)
+Pauli(p::Pauli) = p
+Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}) where {T} = Pauli(UPauli{T}(p), (im)^county(UPauli(p)))
+Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = Pauli{UInt}(p)
+Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) where {T} = Pauli(UPauli{T}(p), sign)
+Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) = Pauli(UPauli(p), sign)
+# Base.:(==)(p1::Pauli, p2::Pauli) = p1.string == p2.string & p1.sign == p2.sign
 
-function tostring(p::SignedPauli)::String
-    p.sign == 1 && return "(+)" * tostring(Pauli(p))
-    p.sign == -1 && return "(-)" * tostring(Pauli(p))
-    p.sign == 1im && return "(i)" * tostring(Pauli(p))
-    p.sign == -1im && return "(-i)" * tostring(Pauli(p))
+function tostring(p::Pauli)::String
+    sign = p.sign * C8(-im)^county(p)
+    sign == 1 && return "(+)" * tostring(UPauli(p))
+    sign == -1 && return "(-)" * tostring(UPauli(p))
+    sign == im && return "(i)" * tostring(UPauli(p))
+    sign == -im && return "(-i)" * tostring(UPauli(p))
 end
