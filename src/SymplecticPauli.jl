@@ -9,6 +9,7 @@ include("pauli.jl")
 include("paulisentence.jl")
 include("broadcast.jl")
 include("paulimath.jl")
+include("utils.jl")
 
 end
 
