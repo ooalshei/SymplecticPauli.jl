@@ -113,15 +113,4 @@ function ad(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::Abs
     end
     return result
 end
-function ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
-    length(generators) == length(cosines) == length(sines) || throw(DimensionMismatch("Generators and angles need to be equal size ($(length(generators)), $(length(cosines)), $(length(sines)))"))
-    length(generators) == 0 && return s
-    for (generator, cosine, sine) in zip(reverse(generators), reverse(cosines), reverse(sines))
-        ad!(s, generator, cosine, sine, atol=atol)
-    end
-    return s
-end
-ad(s::PauliSentence, generator::UPauli, angle::Real; atol::Real=0) = ad(s, generator, cos(2 * angle), sin(2 * angle), atol=atol)
-ad!(s::PauliSentence, generator::UPauli, angle::Real; atol::Real=0) = ad!(s, generator, cos(2 * angle), sin(2 * angle), atol=atol)
 ad(s::PauliSentence, generators::AbstractVector{<:UPauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
-ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad!(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
