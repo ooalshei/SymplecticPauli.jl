@@ -10,6 +10,7 @@ Base.length(s::PauliSentence) = length(s.sentence)
 Base.get(s::PauliSentence, key, default) = get(s.sentence, key, default)
 Base.setindex!(s::PauliSentence, value, key) = setindex!(s.sentence, value, key)
 Base.empty(::PauliSentence{T,N,Q}) where {T,N,Q} = PauliSentence{T,N,Q}(Dict{T,N}())
+Base.delete!(s::PauliSentence, key) = delete!(s.sentence, key)
 
 PauliSentence{T,N}(s::AbstractDict{<:Unsigned,<:Number}, Q::Integer) where {T,N} = PauliSentence{T,N,Q}(s)
 PauliSentence(s::AbstractDict{T,N}, Q::Integer) where {T<:Unsigned,N<:Number} = PauliSentence{T,N,Q}(s)
