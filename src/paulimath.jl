@@ -95,15 +95,17 @@ end
 function ad(s::PauliSentence{Ts,<:Number,Q}, generator::UPauli{T,Q}, cosine::Real, sine::Real; atol::Real=0) where {Ts,T,Q}
     result = PauliSentence{promote_type(T, Ts),ComplexF64,Q}(s)
     (iszero(sine) | iszero(generator.string)) && return result
+    modsine = (im)^(county(generator) + 1) * sine
     for (key, value) in s
         string = _symplectic_prod(generator.string, key, Q)
         if string.second != _symplectic_prod(key, generator.string, Q).second
             result[key] += (cosine - 1) * value
-            haskey(result, string.first) ? result[string.first] += im * sine * string.second * value : result[string.first] = im * sine * string.second * value 
+            haskey(result, string.first) ? result[string.first] += modsine * string.second * value : result[string.first] = modsine * string.second * value 
         end
     end
     return filter!(p->(abs(p.second) > atol), result)
 end
+ad(s::PauliSentence, generator::UPauli, angle::Real; atol::Real=0) = ad(s, generator, cos(2 * angle), sin(2 * angle), atol=atol)
 function ad(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
     length(generators) == length(cosines) == length(sines) || throw(DimensionMismatch("Generators and angles need to be equal size ($(length(generators)), $(length(cosines)), $(length(sines)))"))
     result = copy(s)
