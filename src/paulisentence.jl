@@ -22,39 +22,30 @@ function PauliSentence{T,N,Q}(paulis::AbstractVector{<:Unsigned}, coeffs::Abstra
 end
 PauliSentence{T,N}(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{<:Number}, Q::Integer) where {T,N} = PauliSentence{T,N,Q}(paulis, coeffs)
 PauliSentence(paulis::AbstractVector{T}, coeffs::AbstractVector{N}, Q::Integer) where {T<:Unsigned,N<:Number} = PauliSentence{T,N,Q}(paulis, coeffs)
-PauliSentence{T,N}(paulis::AbstractVector{<:UPauli{<:Unsigned,Q}}, coeffs::AbstractVector{<:Number}) where {T,N,Q} = PauliSentence{T,N,Q}(toint.(paulis), coeffs)
-PauliSentence(paulis::AbstractVector{UPauli{T,Q}}, coeffs::AbstractVector{N}) where {T,Q,N<:Number} = PauliSentence{T,N}(paulis, coeffs)
+PauliSentence{T,N}(paulis::AbstractVector{<:UPauli{<:Unsigned,Q}}, coeffs::AbstractVector{<:Number}) where {T,N,Q} = PauliSentence{T,N,Q}(toint.(paulis), im .^ (county.(paulis)) .* coeffs)
+PauliSentence(paulis::AbstractVector{UPauli{T,Q}}, coeffs::AbstractVector{N}) where {T,Q,N<:Number} = any(p -> isodd(county(p)), paulis) ? PauliSentence{T,promote_type(C8, N)}(paulis, coeffs) : PauliSentence{T,N}(paulis, coeffs)
 function PauliSentence{T,N}(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{<:Number}) where {T,N}
     ps = Pauli.(paulis)
     c = copy(coeffs)
-    for (i,p) in pairs(ps)
+    for (i, p) in pairs(ps)
         c[i] *= p.sign
     end
     return PauliSentence{T,N,length(paulis[1])}(toint.(ps), c)
 end
-PauliSentence(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{N}) where {N<:Number} = PauliSentence{UInt,N}(paulis, coeffs)
+PauliSentence(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{N}) where {N<:Number} = any(p -> isodd(county(p)), Pauli.(paulis)) ? PauliSentence{UInt,promote_type(C8, N)}(paulis, coeffs) : PauliSentence{UInt,N}(paulis, coeffs)
 PauliSentence{T,N}(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{<:Number}) where {T,N} = PauliSentence{T,N}(eachcol(paulis), coeffs)
-PauliSentence(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{N}) where {N<:Number} = PauliSentence{UInt,T}(eachcol(paulis), coeffs)
-PauliSentence{T,N}(sentence::AbstractDict{<:UPauli,<:Number}) where {T,N} = PauliSentence{T,N}(collect(keys(sentence)), collect(values(sentence)))
-PauliSentence(sentence::AbstractDict{<:UPauli{T,<:Integer},N}) where {T,N<:Number} = PauliSentence{T,N}(sentence)
-PauliSentence{T,N}(sentence::AbstractDict{<:Union{AbstractString,AbstractVector{<:Integer}},<:Number}) where {T,N} = PauliSentence{T,N}(collect(keys(sentence)), collect(values(sentence)))
+PauliSentence(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{N}) where {N<:Number} = PauliSentence{UInt,N}(eachcol(paulis), coeffs)
+# PauliSentence{T,N}(sentence::AbstractDict{<:UPauli,<:Number}) where {T,N} = PauliSentence{T,N}(collect(keys(sentence)), collect(values(sentence)))
+PauliSentence{T,N}(sentence::AbstractDict{<:Union{UPauli,AbstractString,AbstractVector{<:Integer}},<:Number}) where {T,N} = PauliSentence{T,N}(collect(keys(sentence)), collect(values(sentence)))
+PauliSentence(sentence::AbstractDict{<:UPauli{T,Q},N}) where {T,N<:Number,Q} = PauliSentence{T,N}(sentence)
 PauliSentence(sentence::AbstractDict{<:Union{AbstractString,AbstractVector{<:Integer}},N}) where {N<:Number} = PauliSentence{UInt,N}(sentence)
 PauliSentence{T,N}(s::PauliSentence) where {T,N} = PauliSentence{T,N,s.qubits}(s.sentence)
 PauliSentence(s::PauliSentence) = copy(s)
 
 function tostring(s::PauliSentence)
-    result = Dict{String, valtype(s)}()
+    result = Dict{String,valtype(s)}()
     for (key, value) in pairs(s)
-        sign = (-im)^county(key, s.qubits)
-        if sign == 1
-            result[tostring(UPauli(UInt(key), s.qubits))] = value
-        elseif sign == -1
-            result["(-)" * tostring(UPauli(UInt(key), s.qubits))] = value
-        elseif sign == im
-            result["(i)" * tostring(UPauli(UInt(key), s.qubits))] = value
-        else
-            result["(-i)" * tostring(UPauli(UInt(key), s.qubits))] = value
-        end
+        result[tostring(UPauli(UInt(key), s.qubits))] = (-im)^county(key, s.qubits) * value
     end
     return result
 end

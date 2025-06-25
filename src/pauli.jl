@@ -7,7 +7,7 @@ toint(::Type{T}, p::AbstractPauli) where {T<:Integer} = T(p.string)
 struct UPauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     string::T
     qubits::Integer
-    UPauli{T,Q}(string::Integer) where {T,Q} = string > (4^Q - 1) ? throw(ArgumentError("String must not exceed $(4^Q - 1).")) : new{T,Q}(string, Q)
+    UPauli{T,Q}(string) where {T,Q} = (_check_string_length(string, Q); new{T,Q}(string, Q))
 end
 UPauli(string::T, Q::Integer) where {T<:Unsigned} = UPauli{T,Q}(string)
 # UPauli{T,Q}(p::AbstractPauli) where {T,Q} = UPauli{T,Q}(p.string)
@@ -16,7 +16,7 @@ UPauli(p::AbstractPauli{T,Q}) where {T,Q} = UPauli{T,Q}(p.string)
 function UPauli{T}(p::AbstractString) where {T}
     unique(p) ⊆ ['X', 'Y', 'Z', 'I', '-'] || throw(ArgumentError("String must contain only 'X', 'Y', 'Z', 'I', or '-'."))
     Q = length(p)
-    Base.hastypemax(T) && typemax(T) < 4^Q && throw(ArgumentError("String length cannot exceed $(count_ones(typemax(T)) ÷ 2)). Consider using a larger unsigned integer type."))
+    _check_type(T, Q)
     number = T(0)
     for char in p
         number <<= 1
@@ -34,7 +34,7 @@ end
 function UPauli{T}(p::AbstractVector{<:Integer}) where {T}
     unique(p) ⊆ [1, 2, 3, 4] || throw(ArgumentError("Array must contain only 1, 2, 3, or 4."))
     Q = length(p)
-    Base.hastypemax(T) && typemax(T) < 4^Q && throw(ArgumentError("Array length cannot exceed $(count_ones(typemax(T)) ÷ 2)). Consider using a larger unsigned integer type."))
+    _check_type(T, Q)
     number = T(0)
     for ind in p
         number <<= 1
@@ -74,20 +74,15 @@ struct Pauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     sign::C8
     qubits::Integer
     function Pauli{T,Q}(string::Integer, sign::Number) where {T,Q}
-        if string > (4^Q - 1)
-            throw(ArgumentError("String must be of length $(4^Q - 1) or less."))
-        elseif !(sign in Set([1, -1, im, -im]))
-            throw(ArgumentError("Sign must be 1, -1, im, or -im"))
-        else
-            new{T,Q}(string, sign, Q)
-        end
+        _check_string_length(string, Q)
+        sign in Set([1, -1, im, -im]) ? new{T,Q}(string, sign, Q) : throw(ArgumentError("Sign must be 1, -1, im, or -im"))
     end
 end
 Pauli(string::T, sign::Number, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string, C8(sign))
 Pauli{T,Q}(string::Unsigned) where {T,Q} = Pauli{T,Q}(string, 1)
 Pauli(string::T, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string, 1)
-Pauli{T}(p::UPauli) where {T} = Pauli{T,p.qubits}(p.string, 1)
-Pauli(p::UPauli{T,Q}) where {T,Q} = Pauli{T,Q}(p.string, 1)
+Pauli{T}(p::UPauli) where {T} = Pauli{T,p.qubits}(p.string, (im)^county(p))
+Pauli(p::UPauli{T,Q}) where {T,Q} = Pauli{T}(p)
 Pauli{T}(p::UPauli, sign::Number) where {T} = Pauli{T,p.qubits}(p.string, C8(sign))
 Pauli(p::UPauli{T,Q}, sign::Number) where {T,Q} = Pauli{T,Q}(p.string, C8(sign))
 Pauli{T}(p::Pauli) where {T} = Pauli{T,p.qubits}(p.string, p.sign)
