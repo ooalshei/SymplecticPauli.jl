@@ -1,6 +1,6 @@
 module SymplecticPauli
 
-export I, σx, σy, σz, ⊗, AbstractPauli, UPauli, Pauli, PauliSentence, toint, tostring, com, ad, ad!, countx, county, countz, tomatrix
+export I, σx, σy, σz, ⊗, AbstractPauli, UPauli, Pauli, PauliList, PauliSentence, toint, tostring, com, ad, ad!, countx, county, countz, tomatrix
 
 using LinearAlgebra: I
 
@@ -12,6 +12,7 @@ const σy_real = -im * σy
 const ⊗ = kron
 
 include("pauli.jl")
+include("paulilist.jl")
 include("paulisentence.jl")
 include("paulimath.jl")
 include("utils.jl")
