@@ -94,6 +94,8 @@ function Base.:*(s::PauliSentence{Ts,<:Number,Q}, r::PauliSentence{Tr,<:Number,Q
     return result
 end
 
+Base.:^(s::PauliSentence{T,N,Q}, x::Integer) where {T,N,Q} = x >= 0 ? prod(s for _ in 1:x; init=PauliSentence{T,N,Q}(T[0], [1])) : throw(ArgumentError("Exponent must be a non-negative integer."))
+
 function ad(s::PauliSentence{Ts,<:Number,Q}, generator::UPauli{T,Q}, cosine::Real, sine::Real; atol::Real=0) where {Ts,T,Q}
     result = PauliSentence{promote_type(T, Ts),ComplexF64,Q}(s)
     (iszero(sine) | iszero(generator.string)) && return result
@@ -145,3 +147,5 @@ function ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::Ab
     return s
 end
 ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad!(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
+
+trace(s::PauliSentence) = haskey(s, 0) ? s[0] / 2^s.qubits : zero(eltype(s))
