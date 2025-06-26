@@ -13,6 +13,38 @@ county(p::AbstractPauli) = county(p.string, p.qubits)
 countz(string::Unsigned, Q::Integer) = (_check_string_length(string, Q); count_ones(string >> Q))
 countz(p::AbstractPauli) = countz(p.string, p.qubits)
 
+function tostring(p::UPauli)::String
+    result = ""
+    string = digits(p.string, base=2, pad=2*p.qubits)
+    for i in 1:p.qubits
+        if string[i] == string[i + p.qubits] == 1
+            result = "Y" * result
+        elseif string[i] == 1
+            result = "X" * result
+        elseif string[i + p.qubits] == 1
+            result = "Z" * result
+        else
+            result = "-" * result
+        end
+    end
+    return result
+end
+function tostring(p::Pauli)::String
+    sign = p.sign * C8(-im)^county(p)
+    sign == 1 && return "(+)" * tostring(UPauli(p))
+    sign == -1 && return "(-)" * tostring(UPauli(p))
+    sign == im && return "(i)" * tostring(UPauli(p))
+    sign == -im && return "(-i)" * tostring(UPauli(p))
+end
+function tostring(s::PauliSentence)
+    result = Dict{String,valtype(s)}()
+    for (key, value) in pairs(s)
+        result[tostring(UPauli(UInt(key), s.qubits))] = (-im)^county(key, s.qubits) * value
+    end
+    return result
+end
+tostring(v::PauliList) = tostring.(UPauli.(v.strings, v.qubits))
+
 function tomatrix(string::Unsigned, Q::Integer)
     _check_string_length(string, Q)
     result = I(1)

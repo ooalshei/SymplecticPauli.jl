@@ -43,11 +43,3 @@ PauliSentence(sentence::AbstractDict{<:UPauli{T,Q},N}) where {T,N<:Number,Q} = P
 PauliSentence(sentence::AbstractDict{<:Union{AbstractString,AbstractVector{<:Integer}},N}) where {N<:Number} = PauliSentence{UInt,N}(sentence)
 PauliSentence{T,N}(s::PauliSentence) where {T,N} = PauliSentence{T,N,s.qubits}(s.sentence)
 PauliSentence(s::PauliSentence) = copy(s)
-
-function tostring(s::PauliSentence)
-    result = Dict{String,valtype(s)}()
-    for (key, value) in pairs(s)
-        result[tostring(UPauli(UInt(key), s.qubits))] = (-im)^county(key, s.qubits) * value
-    end
-    return result
-end

@@ -52,23 +52,6 @@ end
 UPauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = UPauli{UInt}(p)
 # Base.:(==)(p::UPauli, q::UPauli) = p.string == q.string
 
-function tostring(p::UPauli)::String
-    result = ""
-    string = digits(p.string, base=2, pad=2*p.qubits)
-    for i in 1:p.qubits
-        if string[i] == string[i + p.qubits] == 1
-            result = "Y" * result
-        elseif string[i] == 1
-            result = "X" * result
-        elseif string[i + p.qubits] == 1
-            result = "Z" * result
-        else
-            result = "-" * result
-        end
-    end
-    return result
-end
-
 struct Pauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     string::T
     sign::C8
@@ -92,11 +75,3 @@ Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = Pauli{UInt}(p)
 Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) where {T} = Pauli(UPauli{T}(p), sign)
 Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) = Pauli(UPauli(p), sign)
 # Base.:(==)(p1::Pauli, p2::Pauli) = p1.string == p2.string & p1.sign == p2.sign
-
-function tostring(p::Pauli)::String
-    sign = p.sign * C8(-im)^county(p)
-    sign == 1 && return "(+)" * tostring(UPauli(p))
-    sign == -1 && return "(-)" * tostring(UPauli(p))
-    sign == im && return "(i)" * tostring(UPauli(p))
-    sign == -im && return "(-i)" * tostring(UPauli(p))
-end
