@@ -88,7 +88,7 @@ function Base.:*(s::PauliSentence{Ts,<:Number,Q}, r::PauliSentence{Tr,<:Number,Q
     for (key1, value1) in s
         for (key2, value2) in r
             string = _symplectic_prod(key1, key2, Q)
-            haskey(result, string.first) ? result[string.first] += string.second * value1 * value2 : result[key] = string.second * value1 * value2
+            haskey(result, string.first) ? result[string.first] += string.second * value1 * value2 : result[string.first] = string.second * value1 * value2
         end
     end
     return result
@@ -114,8 +114,8 @@ ad(s::PauliSentence, generator::UPauli, angle::Real; atol::Real=0) = ad(s, gener
 function ad!(s::PauliSentence{<:Unsigned,ComplexF64,Q}, generator::UPauli{<:Unsigned,Q}, cosine::Real, sine::Real; atol::Real=0) where {Q}
     (iszero(sine) | iszero(generator.string)) && return s
     modsine = (im)^(county(generator) + 1) * sine
-    keylist = keys(s)
-    valuelist = values(s)
+    keylist = collect(keys(s))
+    valuelist = collect(values(s))
     for (key, value) in zip(keylist, valuelist)
         string = _symplectic_prod(generator.string, key, Q)
         if string.second != _symplectic_prod(key, generator.string, Q).second
