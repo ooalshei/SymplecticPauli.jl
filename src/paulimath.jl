@@ -96,6 +96,8 @@ end
 
 Base.:^(s::PauliSentence{T,N,Q}, x::Integer) where {T,N,Q} = x >= 0 ? prod(s for _ in 1:x; init=PauliSentence{T,N,Q}(T[0], [1])) : throw(ArgumentError("Exponent must be a non-negative integer."))
 
+Base.cis(s::PauliSentence, θ::Real) = PauliSentence{keytype(s),ComplexF64}(cis(θ * tomatrix(s)))
+
 function ad(s::PauliSentence{Ts,<:Number,Q}, generator::UPauli{T,Q}, cosine::Real, sine::Real; atol::Real=0) where {Ts,T,Q}
     result = PauliSentence{promote_type(T, Ts),ComplexF64,Q}(s)
     (iszero(sine) | iszero(generator.string)) && return result
