@@ -13,6 +13,9 @@ county(p::AbstractPauli) = county(p.string, p.qubits)
 countz(string::Unsigned, Q::Integer) = (_check_string_length(string, Q); count_ones(string >> Q))
 countz(p::AbstractPauli) = countz(p.string, p.qubits)
 
+counti(string::Unsigned, Q::Integer) = Q - countx(string, Q) - county(string, Q) - countz(string, Q)
+counti(p::AbstractPauli) = counti(p.string, p.qubits)
+
 function tostring(p::UPauli)::String
     result = ""
     string = digits(p.string, base=2, pad=2*p.qubits)
