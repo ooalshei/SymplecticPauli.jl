@@ -17,8 +17,8 @@ PauliSentence(s::AbstractDict{T,N}, Q::Integer) where {T<:Unsigned,N<:Number} = 
 function PauliSentence{T,N,Q}(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{<:Number}) where {T,N,Q}
     length(paulis) == length(coeffs) || throw(DimensionMismatch("Length of paulis and coeffs must be the same."))
     maximum(paulis) < 4^Q || throw(ArgumentError("Pauli string must not exceed $(4^Q - 1)."))
-    sentence = Dict(zip(paulis, coeffs))
-    return PauliSentence{T,N,Q}(sentence)
+    # sentence = Dict(zip(paulis, coeffs))
+    return PauliSentence{T,N,Q}(Dict(Pair.(paulis, coeffs)))
 end
 PauliSentence{T,N}(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{<:Number}, Q::Integer) where {T,N} = PauliSentence{T,N,Q}(paulis, coeffs)
 PauliSentence(paulis::AbstractVector{T}, coeffs::AbstractVector{N}, Q::Integer) where {T<:Unsigned,N<:Number} = PauliSentence{T,N,Q}(paulis, coeffs)
@@ -41,5 +41,17 @@ PauliSentence(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{N}) wher
 PauliSentence{T,N}(sentence::AbstractDict{<:Union{UPauli,AbstractString,AbstractVector{<:Integer}},<:Number}) where {T,N} = PauliSentence{T,N}(collect(keys(sentence)), collect(values(sentence)))
 PauliSentence(sentence::AbstractDict{<:UPauli{T,Q},N}) where {T,N<:Number,Q} = PauliSentence{T,N}(sentence)
 PauliSentence(sentence::AbstractDict{<:Union{AbstractString,AbstractVector{<:Integer}},N}) where {N<:Number} = PauliSentence{UInt,N}(sentence)
+function PauliSentence{T,N}(m::AbstractMatrix{<:Number}) where {T,N}
+    (x, y) = size(m)
+    Q = log2(x)
+    (isequal(x, y) & isinteger(Q)) || throw(ArgumentError("Matrix must be square and of size 2^Q x 2^Q for some integer Q."))
+    sentence = PauliSentence(Dict{T,N}(), Int(Q))
+    for i in 0:x^2-1
+        c = conj(tr(tomatrix(T(i), Int(Q)) * m') / x)
+        abs(c) > eps(Float64) && (sentence[T(i)] = c)
+    end
+    return sentence
+end
+PauliSentence(m::AbstractMatrix{<:Number}) = PauliSentence{UInt,ComplexF64}(m)
 PauliSentence{T,N}(s::PauliSentence) where {T,N} = PauliSentence{T,N,s.qubits}(s.sentence)
 PauliSentence(s::PauliSentence) = copy(s)
