@@ -54,11 +54,11 @@ function tomatrix(string::Unsigned, Q::Integer)
     string = digits(string, base=2, pad=2*Q)
     for i in 1:Q
         if string[i] == string[i + Q] == 1
-            result = result ⊗ σy_real  # σy
+            result = result ⊗ σ₂real  # σy
         elseif string[i] == 1
-            result = result ⊗ σx  # σx
+            result = result ⊗ σ₁  # σx
         elseif string[i + Q] == 1
-            result = result ⊗ σz  # σz
+            result = result ⊗ σ₃  # σz
         else
             result = result ⊗ I(2)  # I
         end
