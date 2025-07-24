@@ -18,7 +18,7 @@ function UPauli{T}(p::AbstractString) where {T}
     Q = length(p)
     _check_type(T, Q)
     number = T(0)
-    for char in p
+    for char in Iterators.reverse(p)
         number <<= 1
         if char == 'X'
             number |= 1
@@ -36,7 +36,7 @@ function UPauli{T}(p::AbstractVector{<:Integer}) where {T}
     Q = length(p)
     _check_type(T, Q)
     number = T(0)
-    for ind in p
+    for ind in Iterators.reverse(p)
         number <<= 1
         if ind == 2
             number |= 1

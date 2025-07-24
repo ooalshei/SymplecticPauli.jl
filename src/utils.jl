@@ -21,13 +21,13 @@ function tostring(p::UPauli)::String
     string = digits(p.string, base=2, pad=2*p.qubits)
     for i in 1:p.qubits
         if string[i] == string[i + p.qubits] == 1
-            result = "Y" * result
+            result *= "Y"
         elseif string[i] == 1
-            result = "X" * result
+            result *= "X"
         elseif string[i + p.qubits] == 1
-            result = "Z" * result
+            result *= "Z"
         else
-            result = "-" * result
+            result *= "-"
         end
     end
     return result
@@ -54,13 +54,13 @@ function tomatrix(string::Unsigned, Q::Integer)
     string = digits(string, base=2, pad=2*Q)
     for i in 1:Q
         if string[i] == string[i + Q] == 1
-            result = σy_real ⊗ result  # σy
+            result = result ⊗ σy_real  # σy
         elseif string[i] == 1
-            result = σx ⊗ result  # σx
+            result = result ⊗ σx  # σx
         elseif string[i + Q] == 1
-            result = σz ⊗ result  # σz
+            result = result ⊗ σz  # σz
         else
-            result = I(2) ⊗ result  # I
+            result = result ⊗ I(2)  # I
         end
     end
     return result
