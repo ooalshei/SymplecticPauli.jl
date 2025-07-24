@@ -24,7 +24,7 @@ PauliSentence{T,N}(paulis::AbstractVector{<:Unsigned}, coeffs::AbstractVector{<:
 PauliSentence(paulis::AbstractVector{T}, coeffs::AbstractVector{N}, Q::Integer) where {T<:Unsigned,N<:Number} = PauliSentence{T,N,Q}(paulis, coeffs)
 PauliSentence{T,N}(paulis::PauliList, coeffs::AbstractVector{<:Number}) where {T,N} = PauliSentence{T,N}(UPauli.(paulis, paulis.qubits), coeffs)
 PauliSentence(paulis::PauliList{T,Q}, coeffs::AbstractVector{N}) where {T,Q,N<:Number} = PauliSentence{T,promote_type(C8, N)}(paulis, coeffs)
-PauliSentence{T,N}(paulis::AbstractVector{<:UPauli{<:Unsigned,Q}}, coeffs::AbstractVector{<:Number}) where {T,N,Q} = PauliSentence{T,N,Q}(toint.(paulis), im .^ (county.(paulis)) .* coeffs)
+PauliSentence{T,N}(paulis::AbstractVector{<:UPauli{<:Unsigned,Q}}, coeffs::AbstractVector{<:Number}) where {T,N,Q} = PauliSentence{T,N,Q}(map(x -> x.string, paulis), im .^ (county.(paulis)) .* coeffs)
 PauliSentence(paulis::AbstractVector{UPauli{T,Q}}, coeffs::AbstractVector{N}) where {T,Q,N<:Number} = any(p -> isodd(county(p)), paulis) ? PauliSentence{T,promote_type(C8, N)}(paulis, coeffs) : PauliSentence{T,N}(paulis, coeffs)
 function PauliSentence{T,N}(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{<:Number}) where {T,N}
     ps = Pauli.(paulis)
@@ -32,7 +32,7 @@ function PauliSentence{T,N}(paulis::AbstractVector{<:Union{AbstractString,Abstra
     for (i, p) in pairs(ps)
         c[i] *= p.sign
     end
-    return PauliSentence{T,N,length(paulis[1])}(toint.(ps), c)
+    return PauliSentence{T,N,length(paulis[1])}(map(x -> x.string, ps), c)
 end
 PauliSentence(paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}, coeffs::AbstractVector{N}) where {N<:Number} = any(p -> isodd(county(p)), Pauli.(paulis)) ? PauliSentence{UInt,promote_type(C8, N)}(paulis, coeffs) : PauliSentence{UInt,N}(paulis, coeffs)
 PauliSentence{T,N}(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{<:Number}) where {T,N} = PauliSentence{T,N}(eachcol(paulis), coeffs)

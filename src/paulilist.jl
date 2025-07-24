@@ -28,11 +28,11 @@ Base.similar(v::PauliList{<:Unsigned,Q}, ::Type{T}) where {T<:Unsigned,Q} = Paul
 Base.similar(v::PauliList{<:Unsigned,Q}, ::Type{T}, m::Int) where {T<:Unsigned,Q} = PauliList{T,Q}(similar(v.strings, T, m), iscopy=false, check=false)
 # Base.copy(v::PauliList) = PauliList(v.strings, v.qubits, check=false)
 
-toint(v::PauliList) = v.strings
+# toint(v::PauliList) = v.strings
 PauliList(v::AbstractVector{T}, Q::Integer; iscopy=true, check=true) where {T<:Unsigned} = PauliList{T,Q}(v, iscopy=iscopy, check=check)
-PauliList{T}(v::AbstractVector{<:UPauli}) where {T} = PauliList{T,v[1].qubits}(toint.(v), iscopy=false, check=false)
-PauliList(v::AbstractVector{<:UPauli{T,Q}}) where {T,Q} = PauliList{T}(v, iscopy=false, check=false)
-PauliList{T}(v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}) where {T} = PauliList{T,length(v[1])}(toint.(UPauli.(v)), iscopy=false, check=false)
+PauliList{T}(v::AbstractVector{<:UPauli}) where {T} = PauliList{T,v[1].qubits}(map(x -> x.string, v), iscopy=false, check=false)
+PauliList(v::AbstractVector{<:UPauli{T,Q}}) where {T,Q} = PauliList{T}(v)
+PauliList{T}(v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}) where {T} = PauliList{T,length(v[1])}(map(UPauli |> (x -> x.string) , v), iscopy=false, check=false)
 PauliList(v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}) = PauliList{UInt}(v)
 PauliList{T}(v::AbstractMatrix{<:Integer}) where {T} = PauliList{T}(eachcol(v))
 PauliList(v::AbstractMatrix{<:Integer}) = PauliList{UInt}(v)

@@ -1,8 +1,8 @@
 abstract type AbstractPauli{T<:Unsigned,Q} end
 Base.copy(p::AbstractPauli) = p
 Base.show(io::IO, p::AbstractPauli{T}) where {T} = print(io, "Pauli{$T}(", tostring(p), ")")
-toint(p::AbstractPauli) = p.string
-toint(::Type{T}, p::AbstractPauli) where {T<:Integer} = T(p.string)
+# toint(p::AbstractPauli) = p.string
+# toint(::Type{T}, p::AbstractPauli) where {T<:Integer} = T(p.string)
 
 struct UPauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     string::T

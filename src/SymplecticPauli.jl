@@ -1,6 +1,6 @@
 module SymplecticPauli
 
-export I, σx, σy, σz, σy_real, ⊗, AbstractPauli, UPauli, Pauli, PauliList, PauliSentence, toint, tostring, com, ad, ad!, countx, county, countz, counti, tomatrix
+export I, σx, σy, σz, σy_real, ⊗, AbstractPauli, UPauli, Pauli, PauliList, PauliSentence, tostring, com, ad, ad!, countx, county, countz, counti, tomatrix
 
 using LinearAlgebra: I, norm, tr
 
