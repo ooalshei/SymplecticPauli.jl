@@ -4,4 +4,5 @@
 /Manifest.toml
 /.vscode/
 debug*
-
+trial*
+/.JuliaFormatter.toml
