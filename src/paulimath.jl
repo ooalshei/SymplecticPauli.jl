@@ -140,7 +140,7 @@ function ad(s::PauliSentence, generators::PauliList, cosines::AbstractVector{<:R
 end
 ad(s::PauliSentence, generators::PauliList, angles::AbstractVector{<:Real}; atol::Real=0) = ad(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
 
-function ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
+function ad!(s::PauliSentence, generators::PauliList, cosines::AbstractVector{<:Real}, sines::AbstractVector{<:Real}; atol::Real=0)
     length(generators) == length(cosines) == length(sines) || throw(DimensionMismatch("Generators and angles need to be equal size ($(length(generators)), $(length(cosines)), $(length(sines)))"))
     length(generators) == 0 && return s
     for (generator, cosine, sine) in zip(reverse(generators), reverse(cosines), reverse(sines))
@@ -148,6 +148,6 @@ function ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, cosines::Ab
     end
     return s
 end
-ad!(s::PauliSentence, generators::AbstractVector{<:UPauli}, angles::AbstractVector{<:Real}; atol::Real=0) = ad!(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
+ad!(s::PauliSentence, generators::PauliList, angles::AbstractVector{<:Real}; atol::Real=0) = ad!(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
 
 trace(s::PauliSentence) = haskey(s, 0) ? s[0] / 2^s.qubits : zero(eltype(s))
