@@ -1,30 +1,42 @@
-_check_string_length(string::Unsigned, Q::Integer) = string > 4^Q - 1 ? throw(ArgumentError("String must not exceed $(4^Q - 1).")) : nothing
+_check_string_length(string::Unsigned, Q::Integer) =
+    string > 4^Q - 1 ? throw(ArgumentError("String must not exceed $(4^Q - 1).")) : nothing
 function _check_type(::Type{T}, s::Integer) where {T<:Unsigned}
-    Base.hastypemax(T) && typemax(T) < 4^s - 1 && throw(ArgumentError("String length cannot exceed $(count_ones(typemax(T)) ÷ 2)). Consider using a larger unsigned integer type."))
+    Base.hastypemax(T) &&
+        typemax(T) < 4^s - 1 &&
+        throw(
+            ArgumentError(
+                "String length cannot exceed $(count_ones(typemax(T)) ÷ 2)). Consider using
+                a larger unsigned integer type.",
+            ),
+        )
     nothing
 end
 
-countx(string::Unsigned, Q::Integer) = (_check_string_length(string, Q); count_ones(string & (2^Q - 1)))
+countx(string::Unsigned, Q::Integer) =
+    (_check_string_length(string, Q); count_ones(string & (2^Q - 1)))
 countx(p::AbstractPauli) = countx(p.string, p.qubits)
 
-county(string::Unsigned, Q::Integer) = (_check_string_length(string, Q); count_ones(string & (string >> Q)))
+county(string::Unsigned, Q::Integer) =
+    (_check_string_length(string, Q); count_ones(string & (string >> Q)))
 county(p::AbstractPauli) = county(p.string, p.qubits)
 
-countz(string::Unsigned, Q::Integer) = (_check_string_length(string, Q); count_ones(string >> Q))
+countz(string::Unsigned, Q::Integer) =
+    (_check_string_length(string, Q); count_ones(string >> Q))
 countz(p::AbstractPauli) = countz(p.string, p.qubits)
 
-counti(string::Unsigned, Q::Integer) = Q - countx(string, Q) - county(string, Q) - countz(string, Q)
+counti(string::Unsigned, Q::Integer) =
+    Q - countx(string, Q) - county(string, Q) - countz(string, Q)
 counti(p::AbstractPauli) = counti(p.string, p.qubits)
 
 function tostring(p::UPauli)::String
     result = ""
-    string = digits(p.string, base=2, pad=2*p.qubits)
+    string = digits(p.string, base=2, pad=2 * p.qubits)
     for i in 1:p.qubits
-        if string[i] == string[i + p.qubits] == 1
+        if string[i] == string[i+p.qubits] == 1
             result *= "Y"
         elseif string[i] == 1
             result *= "X"
-        elseif string[i + p.qubits] == 1
+        elseif string[i+p.qubits] == 1
             result *= "Z"
         else
             result *= "-"
@@ -51,13 +63,13 @@ tostring(v::PauliList) = tostring.(UPauli.(v.strings, v.qubits))
 function tomatrix(string::Unsigned, Q::Integer)
     _check_string_length(string, Q)
     result = I(1)
-    string = digits(string, base=2, pad=2*Q)
+    string = digits(string, base=2, pad=2 * Q)
     for i in 1:Q
-        if string[i] == string[i + Q] == 1
+        if string[i] == string[i+Q] == 1
             result = result ⊗ σ₂real  # σy
         elseif string[i] == 1
             result = result ⊗ σ₁  # σx
-        elseif string[i + Q] == 1
+        elseif string[i+Q] == 1
             result = result ⊗ σ₃  # σz
         else
             result = result ⊗ I(2)  # I

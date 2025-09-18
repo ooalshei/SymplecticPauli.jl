@@ -14,7 +14,8 @@ UPauli(string::T, Q::Integer) where {T<:Unsigned} = UPauli{T,Q}(string)
 UPauli{T}(p::AbstractPauli) where {T} = UPauli{T,p.qubits}(p.string)
 UPauli(p::AbstractPauli{T,Q}) where {T,Q} = UPauli{T,Q}(p.string)
 function UPauli{T}(p::AbstractString) where {T}
-    unique(p) ⊆ ['X', 'Y', 'Z', 'I', '-'] || throw(ArgumentError("String must contain only 'X', 'Y', 'Z', 'I', or '-'."))
+    unique(p) ⊆ ['X', 'Y', 'Z', 'I', '-'] ||
+        throw(ArgumentError("String must contain only 'X', 'Y', 'Z', 'I', or '-'."))
     Q = length(p)
     _check_type(T, Q)
     number = T(0)
@@ -32,7 +33,8 @@ function UPauli{T}(p::AbstractString) where {T}
     return UPauli{T,Q}(number)
 end
 function UPauli{T}(p::AbstractVector{<:Integer}) where {T}
-    unique(p) ⊆ [1, 2, 3, 4] || throw(ArgumentError("Array must contain only 1, 2, 3, or 4."))
+    unique(p) ⊆ [1, 2, 3, 4] ||
+        throw(ArgumentError("Array must contain only 1, 2, 3, or 4."))
     Q = length(p)
     _check_type(T, Q)
     number = T(0)
@@ -58,10 +60,15 @@ struct Pauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     qubits::Integer
     function Pauli{T,Q}(string::Integer, sign::Number) where {T,Q}
         _check_string_length(string, Q)
-        sign in Set([1, -1, im, -im]) ? new{T,Q}(string, sign, Q) : throw(ArgumentError("Sign must be 1, -1, im, or -im"))
+        if sign in Set([1, -1, im, -im])
+            new{T,Q}(string, sign, Q)
+        else
+            throw(ArgumentError("Sign must be 1, -1, im, or -im"))
+        end
     end
 end
-Pauli(string::T, sign::Number, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string, C8(sign))
+Pauli(string::T, sign::Number, Q::Integer) where {T<:Unsigned} =
+    Pauli{T,Q}(string, C8(sign))
 Pauli{T,Q}(string::Unsigned) where {T,Q} = Pauli{T,Q}(string, 1)
 Pauli(string::T, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string, 1)
 Pauli{T}(p::UPauli) where {T} = Pauli{T,p.qubits}(p.string, (im)^county(p))
@@ -70,8 +77,11 @@ Pauli{T}(p::UPauli, sign::Number) where {T} = Pauli{T,p.qubits}(p.string, C8(sig
 Pauli(p::UPauli{T,Q}, sign::Number) where {T,Q} = Pauli{T,Q}(p.string, C8(sign))
 Pauli{T}(p::Pauli) where {T} = Pauli{T,p.qubits}(p.string, p.sign)
 Pauli(p::Pauli) = p
-Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}) where {T} = Pauli(UPauli{T}(p), (im)^county(UPauli(p)))
+Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}) where {T} =
+    Pauli(UPauli{T}(p), (im)^county(UPauli(p)))
 Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}) = Pauli{UInt}(p)
-Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) where {T} = Pauli(UPauli{T}(p), sign)
-Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) = Pauli(UPauli(p), sign)
+Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) where {T} =
+    Pauli(UPauli{T}(p), sign)
+Pauli(p::Union{AbstractString,AbstractVector{<:Integer}}, sign::Number) =
+    Pauli(UPauli(p), sign)
 # Base.:(==)(p1::Pauli, p2::Pauli) = p1.string == p2.string & p1.sign == p2.sign
