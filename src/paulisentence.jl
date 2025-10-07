@@ -1,12 +1,13 @@
 struct PauliSentence{T<:Unsigned,N<:Number,Q} <: AbstractDict{T,N}
     sentence::Dict{T,N}
     qubits::Integer
-    PauliSentence{T,N,Q}(sentence) where {T,N,Q} =
+    function PauliSentence{T,N,Q}(sentence; iscopy=true) where {T,N,Q}
         if (isempty(sentence) || maximum(keys(sentence)) < 4^Q)
-            new{T,N,Q}(copy(sentence), Q)
+            iscopy ? new{T,N,Q}(copy(sentence), Q) : new{T,N,Q}(sentence, Q)
         else
             throw(ArgumentError("String must not exceed $(4^Q - 1)."))
         end
+    end
 end
 
 Base.show(io::IO, s::PauliSentence) = print(io, tostring(s))
@@ -14,13 +15,17 @@ Base.iterate(s::PauliSentence, i=1) = iterate(s.sentence, i)
 Base.length(s::PauliSentence) = length(s.sentence)
 Base.get(s::PauliSentence, key, default) = get(s.sentence, key, default)
 Base.setindex!(s::PauliSentence, value, key) = setindex!(s.sentence, value, key)
-Base.empty(::PauliSentence{T,N,Q}) where {T,N,Q} = PauliSentence{T,N,Q}(Dict{T,N}())
+Base.empty(::PauliSentence{T,N,Q}) where {T,N,Q} =
+    PauliSentence{T,N,Q}(Dict{T,N}(), iscopy=false)
 Base.delete!(s::PauliSentence, key) = delete!(s.sentence, key)
 
-PauliSentence{T,N}(s::AbstractDict{<:Unsigned,<:Number}, Q::Integer) where {T,N} =
-    PauliSentence{T,N,Q}(s)
-PauliSentence(s::AbstractDict{T,N}, Q::Integer) where {T<:Unsigned,N<:Number} =
-    PauliSentence{T,N,Q}(s)
+PauliSentence{T,N}(
+    s::AbstractDict{<:Unsigned,<:Number},
+    Q::Integer;
+    iscopy=true,
+) where {T,N} = PauliSentence{T,N,Q}(s, iscopy=iscopy)
+PauliSentence(s::AbstractDict{T,N}, Q::Integer; iscopy=true) where {T<:Unsigned,N<:Number} =
+    PauliSentence{T,N,Q}(s, iscopy=iscopy)
 function PauliSentence{T,N,Q}(
     paulis::AbstractVector{<:Unsigned},
     coeffs::AbstractVector{<:Number},
@@ -29,7 +34,7 @@ function PauliSentence{T,N,Q}(
         throw(DimensionMismatch("Length of paulis and coeffs must be the same."))
     maximum(paulis) < 4^Q ||
         throw(ArgumentError("Pauli string must not exceed $(4^Q - 1)."))
-    return PauliSentence{T,N,Q}(Dict(Pair.(paulis, coeffs)))
+    return PauliSentence{T,N,Q}(Dict(Pair.(paulis, coeffs)), iscopy=false)
 end
 PauliSentence{T,N}(
     paulis::AbstractVector{<:Unsigned},
@@ -53,11 +58,12 @@ PauliSentence{T,N}(
 PauliSentence(
     paulis::AbstractVector{UPauli{T,Q}},
     coeffs::AbstractVector{N},
-) where {T,Q,N<:Number} = if any(p -> isodd(county(p)), paulis)
-    PauliSentence{T,promote_type(C8, N)}(paulis, coeffs)
-else
-    PauliSentence{T,N}(paulis, coeffs)
-end
+) where {T,Q,N<:Number} =
+    if any(p -> isodd(county(p)), paulis)
+        PauliSentence{T,promote_type(C8, N)}(paulis, coeffs)
+    else
+        PauliSentence{T,N}(paulis, coeffs)
+    end
 function PauliSentence{T,N}(
     paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}},
     coeffs::AbstractVector{<:Number},
@@ -72,11 +78,12 @@ end
 PauliSentence(
     paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}},
     coeffs::AbstractVector{N},
-) where {N<:Number} = if any(p -> isodd(county(p)), Pauli.(paulis))
-    PauliSentence{UInt,promote_type(C8, N)}(paulis, coeffs)
-else
-    PauliSentence{UInt,N}(paulis, coeffs)
-end
+) where {N<:Number} =
+    if any(p -> isodd(county(p)), Pauli.(paulis))
+        PauliSentence{UInt,promote_type(C8, N)}(paulis, coeffs)
+    else
+        PauliSentence{UInt,N}(paulis, coeffs)
+    end
 PauliSentence{T,N}(
     paulis::AbstractMatrix{<:Integer},
     coeffs::AbstractVector{<:Number},
@@ -103,7 +110,7 @@ function PauliSentence{T,N}(m::AbstractMatrix{<:Number}) where {T,N}
     (isequal(x, y) & isinteger(Q)) || throw(
         ArgumentError("Matrix must be square and of size 2^Q x 2^Q for some integer Q."),
     )
-    sentence = PauliSentence(Dict{T,N}(), Int(Q))
+    sentence = PauliSentence(Dict{T,N}(), Int(Q), iscopy=false)
     for i in 0:x^2-1
         c = conj(tr(tomatrix(T(i), Int(Q)) * m') / x)
         abs(c) > eps(Float64) && (sentence[T(i)] = c)
