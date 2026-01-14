@@ -11,7 +11,7 @@ struct PauliList{T<:Unsigned,Q} <: AbstractVector{T}
         end
     end
 end
-
+Base.show(io::IO, v::PauliList) = print(io, tostring(v))
 Base.size(v::PauliList) = (length(v.strings),)
 Base.getindex(v::PauliList, i::Integer) = v.strings[i]
 Base.getindex(v::PauliList, inds::UnitRange{Int}) =
@@ -57,8 +57,11 @@ PauliList{T}(v::AbstractVector{<:UPauli}) where {T} =
 PauliList(v::AbstractVector{<:UPauli{T,Q}}) where {T,Q} = PauliList{T}(v)
 PauliList{T}(
     v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}},
-) where {T} =
-    PauliList{T,length(v[1])}(map(UPauli |> (x -> x.string), v), iscopy=false, check=false)
+) where {T} = PauliList{T,length(v[1])}(
+    map(x -> (x |> UPauli |> (y -> y.string)), v),
+    iscopy=false,
+    check=false,
+)
 
 PauliList(v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}) =
     PauliList{UInt}(v)
@@ -71,6 +74,6 @@ PauliList{T,Q}(::UndefInitializer, n::Integer) where {T,Q} =
 
 PauliList{T}(::UndefInitializer, n::Integer, Q::Integer) where {T} =
     PauliList{T,Q}(Vector{T}(undef, n), iscopy=false, check=false)
-    
+
 PauliList(::UndefInitializer, n::Integer, Q::Integer) =
     PauliList{UInt,Q}(Vector{UInt}(undef, n), iscopy=false, check=false)
