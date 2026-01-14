@@ -68,13 +68,13 @@ struct Pauli{T<:Unsigned,Q} <: AbstractPauli{T,Q}
     end
 end
 Pauli(string::T, sign::Number, Q::Integer) where {T<:Unsigned} =
-    Pauli{T,Q}(string, C8(sign))
+    Pauli{T,Q}(string, sign)
 Pauli{T,Q}(string::Unsigned) where {T,Q} = Pauli{T,Q}(string, 1)
 Pauli(string::T, Q::Integer) where {T<:Unsigned} = Pauli{T,Q}(string, 1)
 Pauli{T}(p::UPauli) where {T} = Pauli{T,p.qubits}(p.string, (im)^county(p))
 Pauli(p::UPauli{T,Q}) where {T,Q} = Pauli{T}(p)
-Pauli{T}(p::UPauli, sign::Number) where {T} = Pauli{T,p.qubits}(p.string, C8(sign))
-Pauli(p::UPauli{T,Q}, sign::Number) where {T,Q} = Pauli{T,Q}(p.string, C8(sign))
+Pauli{T}(p::UPauli, sign::Number) where {T} = Pauli{T,p.qubits}(p.string, sign)
+Pauli(p::UPauli{T,Q}, sign::Number) where {T,Q} = Pauli{T,Q}(p.string, sign)
 Pauli{T}(p::Pauli) where {T} = Pauli{T,p.qubits}(p.string, p.sign)
 Pauli(p::Pauli) = p
 Pauli{T}(p::Union{AbstractString,AbstractVector{<:Integer}}) where {T} =

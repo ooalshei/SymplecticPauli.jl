@@ -1,40 +1,51 @@
-function Base.:*(scalar::Number, p::AbstractPauli)
-    typeof(p) <: UPauli && return Pauli(p, im^county(p) * C8(scalar))
-    return Pauli(p.string, p.sign * C8(scalar))
-end
+Base.:*(scalar::Number, p::UPauli) = Pauli(p, im^county(p) * scalar)
+Base.:*(scalar::Number, p::Pauli) = Pauli(p.string, p.sign * scalar)
 
 unsigned_prod(p::UPauli{<:Unsigned,Q}, q::UPauli{<:Unsigned,Q}) where {Q} =
     UPauli(p.string ⊻ q.string, Q)
 Base.xor(p::UPauli, q::UPauli) = unsigned_prod(p, q)
 
 function com(
-    p::AbstractPauli{T,Q},
-    q::AbstractPauli{U,Q},
-)::UPauli{<:Unsigned,Q} where {T,U,Q}
-    S = promote_type(T, U)
+    p::AbstractPauli{<:Unsigned,Q},
+    q::AbstractPauli{<:Unsigned,Q},
+)::Pair{UPauli{<:Unsigned,Q},Bool} where {Q}
     b1 = p.string >> Q
     b2 = q.string >> Q
-    (isodd(count_ones(p.string & b2)) ⊻ isodd(count_ones(b1 & q.string))) && (return p ⊻ q)
-    return UPauli(S(0), Q)
+    return p ⊻ q => iseven(count_ones((p.string & b2) ⊻ (b1 & q.string)))
 end
 function com(p::Unsigned, q::Unsigned, Q::Integer)
     b1 = p >> Q
     b2 = q >> Q
-    (isodd(count_ones(p & b2)) ⊻ isodd(count_ones(b1 & q))) && (return p ⊻ q)
-    return UInt(0)
+    return p ⊻ q => iseven(count_ones((p & b2) ⊻ (b1 & q)))
 end
 Base.:^(p::AbstractPauli, q::AbstractPauli) = com(p, q)
 
-function Base.:*(
-    p::AbstractPauli{<:Unsigned,Q},
-    q::AbstractPauli{<:Unsigned,Q},
-)::Pauli{<:Unsigned,Q} where {Q}
+function Base.:*(p::UPauli{<:Unsigned,Q}, q::UPauli{<:Unsigned,Q}) where {Q}
     b1 = p.string >> Q
     result = p.string ⊻ q.string
-    sign::C8 = Pauli(p).sign * Pauli(q).sign * (-1)^count_ones(b1 & q)
+    sign::C8 = im^(county(p) + county(q)) * (-1)^count_ones(b1 & q.string)
     return Pauli(result, sign, Q)
 end
-function _symplectic_prod(p::T, q::T, Q::Integer) where {T<:Unsigned}
+function Base.:*(p::Pauli{<:Unsigned,Q}, q::UPauli{<:Unsigned,Q}) where {Q}
+    b1 = p.string >> Q
+    result = p.string ⊻ q.string
+    sign::C8 = im^(county(q)) * p.sign * (-1)^count_ones(b1 & q.string)
+    return Pauli(result, sign, Q)
+end
+function Base.:*(p::UPauli{<:Unsigned,Q}, q::Pauli{<:Unsigned,Q}) where {Q}
+    b1 = p.string >> Q
+    result = p.string ⊻ q.string
+    sign::C8 = im^(county(p)) * q.sign * (-1)^count_ones(b1 & q.string)
+    return Pauli(result, sign, Q)
+end
+
+function Base.:*(p::Pauli{<:Unsigned,Q}, q::Pauli{<:Unsigned,Q}) where {Q}
+    b1 = p.string >> Q
+    result = p.string ⊻ q.string
+    sign::C8 = p.sign * q.sign * (-1)^count_ones(b1 & q.string)
+    return Pauli(result, sign, Q)
+end
+@inline function _symplectic_prod(p::Unsigned, q::Unsigned, Q::Integer)
     b1 = p >> Q
     return p ⊻ q => C8(-1)^count_ones(b1 & q)
 end
