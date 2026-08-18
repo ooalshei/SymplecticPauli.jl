@@ -1,9 +1,39 @@
+@doc raw"""
+    PauliList(strings::AbstractVector{<:Unsigned}, Q)
+    PauliList(text::AbstractVector{<:AbstractString})
+    PauliList{T,Q}(undef, n)
+
+An ordered list of Pauli strings on `Q` qubits — an algebra, a generator set, a subalgebra.
+
+Behaves as an `AbstractVector` of the raw bit strings, so `push!`, `append!`, `deleteat!`,
+indexing and iteration all work; `v[i:j]` returns another `PauliList`. Use
+[`tostring`](@ref) to read one back as text.
+
+# Examples
+```jldoctest
+julia> v = PauliList(["XX-", "-YZ"]);
+
+julia> length(v), v.qubits
+(2, 3)
+
+julia> tostring(v)
+2-element Vector{String}:
+ "XX-"
+ "-YZ"
+
+julia> tostring(push!(copy(v), UPauli("ZZZ").string))
+3-element Vector{String}:
+ "XX-"
+ "-YZ"
+ "ZZZ"
+```
+"""
 struct PauliList{T<:Unsigned,Q} <: AbstractVector{T}
     strings::Vector{T}
-    qubits::Integer
+    qubits::Int
     function PauliList{T,Q}(vector; iscopy=true, check=true) where {T,Q}
-        if check && any(i -> i >= 4^Q, vector)
-            throw(ArgumentError("Elements of the vector must be less than $(4^Q)."))
+        if check && any(i -> !iszero(i >> (2 * Q)), vector)
+            throw(ArgumentError("Elements of the vector must be less than $(big(4)^Q)."))
         elseif iscopy
             new{T,Q}(copy(vector), Q)
         else
@@ -13,7 +43,15 @@ struct PauliList{T<:Unsigned,Q} <: AbstractVector{T}
 end
 Base.show(io::IO, v::PauliList) = print(io, tostring(v))
 Base.size(v::PauliList) = (length(v.strings),)
-Base.getindex(v::PauliList, i::Integer) = v.strings[i]
+Base.length(v::PauliList) = length(v.strings)
+Base.IndexStyle(::Type{<:PauliList}) = IndexLinear()
+Base.@propagate_inbounds Base.getindex(v::PauliList, i::Integer) = v.strings[i]
+Base.copy(v::PauliList{T,Q}) where {T,Q} =
+    PauliList{T,Q}(copy(v.strings), iscopy=false, check=false)
+Base.push!(v::PauliList, item) = (push!(v.strings, item); v)
+Base.append!(v::PauliList, items) = (append!(v.strings, items); v)
+Base.empty!(v::PauliList) = (empty!(v.strings); v)
+Base.sizehint!(v::PauliList, n::Integer) = (sizehint!(v.strings, n); v)
 Base.getindex(v::PauliList, inds::UnitRange{Int}) =
     PauliList(v.strings[inds], v.qubits, iscopy=false, check=false)
 
@@ -30,7 +68,9 @@ Base.deleteat!(v::PauliList, i) =
     PauliList(deleteat!(v.strings, i), v.qubits, iscopy=false, check=false)
 
 # Base.deleteat!(v::PauliList, inds) = deleteat!(v.strings, inds)
+Base.pop!(v::PauliList) = pop!(v.strings)
 Base.popat!(v::PauliList, i) = popat!(v.strings, i)
+Base.popfirst!(v::PauliList) = popfirst!(v.strings)
 Base.similar(v::PauliList{T,Q}) where {T,Q} =
     PauliList{T,Q}(similar(v.strings), iscopy=false, check=false)
 

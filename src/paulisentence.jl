@@ -1,40 +1,103 @@
+@doc raw"""
+    PauliSentence(strings, coefficients, Q)
+    PauliSentence(v::PauliList, coefficients)
+    PauliSentence(m::AbstractMatrix)
+
+An operator: Pauli strings with coefficients, behaving as an `AbstractDict` from string to
+coefficient.
+
+Coefficients multiply the *bare* embedding of their string (`X` ↦ ``σ_1``, `Z` ↦ ``σ_3``,
+`Y` position ↦ the real antisymmetric ``σ_2``), so building one from a
+[`PauliList`](@ref) folds in the ``i^{\#Y}`` phase that makes each term Hermitian — a real
+coefficient vector gives a Hermitian operator. [`tomatrix`](@ref) inverts the
+representation, and constructing from a matrix decomposes it into Paulis.
+
+# Examples
+```jldoctest
+julia> H = PauliSentence(PauliList(["ZZ", "X-"]), [1.0, -0.5]);
+
+julia> length(H), H.qubits
+(2, 2)
+
+julia> H[UPauli("ZZ").string]
+1.0 + 0.0im
+
+julia> tomatrix(H)
+4×4 Matrix{ComplexF64}:
+  1.0+0.0im   0.0+0.0im  -0.5+0.0im   0.0+0.0im
+  0.0+0.0im  -1.0+0.0im   0.0+0.0im  -0.5+0.0im
+ -0.5+0.0im   0.0+0.0im  -1.0+0.0im   0.0+0.0im
+  0.0+0.0im  -0.5+0.0im   0.0+0.0im   1.0+0.0im
+```
+"""
 struct PauliSentence{T<:Unsigned,N<:Number,Q} <: AbstractDict{T,N}
     sentence::Dict{T,N}
-    qubits::Integer
-    function PauliSentence{T,N,Q}(sentence; iscopy=true) where {T,N,Q}
-        if (isempty(sentence) || maximum(keys(sentence)) < 4^Q)
-            iscopy ? new{T,N,Q}(copy(sentence), Q) : new{T,N,Q}(sentence, Q)
+    qubits::Int
+    function PauliSentence{T,N,Q}(
+        sentence::AbstractDict;
+        iscopy::Bool=true,
+        check::Bool=true,
+    ) where {T,N,Q}
+        check && _check_keys(keys(sentence), Q)
+        # `sentence isa Dict{T,N}` is a compile-time test: when the dictionary already has
+        # the target element types it is stored (or copied) as is, otherwise the conversion
+        # itself produces the fresh dictionary and no extra copy is made.
+        if sentence isa Dict{T,N}
+            return iscopy ? new{T,N,Q}(copy(sentence), Q) : new{T,N,Q}(sentence, Q)
         else
-            throw(ArgumentError("String must not exceed $(4^Q - 1)."))
+            return new{T,N,Q}(Dict{T,N}(sentence), Q)
         end
     end
+end
+
+_check_keys(ks, Q::Integer) = if all(k -> iszero(k >> (2 * Q)), ks)
+    nothing
+else
+    throw(ArgumentError("String must not exceed $(big(4)^Q - 1)."))
 end
 
 Base.show(io::IO, s::PauliSentence) = print(io, tostring(s))
 Base.iterate(s::PauliSentence, i=1) = iterate(s.sentence, i)
 Base.length(s::PauliSentence) = length(s.sentence)
+Base.isempty(s::PauliSentence) = isempty(s.sentence)
 Base.get(s::PauliSentence, key, default) = get(s.sentence, key, default)
+Base.getindex(s::PauliSentence, key) = getindex(s.sentence, key)
 Base.setindex!(s::PauliSentence, value, key) = setindex!(s.sentence, value, key)
+Base.haskey(s::PauliSentence, key) = haskey(s.sentence, key)
+Base.keys(s::PauliSentence) = keys(s.sentence)
+Base.values(s::PauliSentence) = values(s.sentence)
+Base.sizehint!(s::PauliSentence, n::Integer) = (sizehint!(s.sentence, n); s)
 Base.empty(::PauliSentence{T,N,Q}) where {T,N,Q} =
-    PauliSentence{T,N,Q}(Dict{T,N}(), iscopy=false)
-Base.delete!(s::PauliSentence, key) = delete!(s.sentence, key)
+    PauliSentence{T,N,Q}(Dict{T,N}(), iscopy=false, check=false)
+Base.copy(s::PauliSentence{T,N,Q}) where {T,N,Q} =
+    PauliSentence{T,N,Q}(copy(s.sentence), iscopy=false, check=false)
+Base.delete!(s::PauliSentence, key) = (delete!(s.sentence, key); s)
+Base.pop!(s::PauliSentence, key, default) = pop!(s.sentence, key, default)
+Base.pop!(s::PauliSentence, key) = pop!(s.sentence, key)
+Base.filter!(f, s::PauliSentence) = (filter!(f, s.sentence); s)
+Base.filter(f, s::PauliSentence{T,N,Q}) where {T,N,Q} =
+    PauliSentence{T,N,Q}(filter(f, s.sentence), iscopy=false, check=false)
 
 PauliSentence{T,N}(
     s::AbstractDict{<:Unsigned,<:Number},
     Q::Integer;
     iscopy=true,
-) where {T,N} = PauliSentence{T,N,Q}(s, iscopy=iscopy)
-PauliSentence(s::AbstractDict{T,N}, Q::Integer; iscopy=true) where {T<:Unsigned,N<:Number} =
-    PauliSentence{T,N,Q}(s, iscopy=iscopy)
+    check=true,
+) where {T,N} = PauliSentence{T,N,Q}(s, iscopy=iscopy, check=check)
+PauliSentence(
+    s::AbstractDict{T,N},
+    Q::Integer;
+    iscopy=true,
+    check=true,
+) where {T<:Unsigned,N<:Number} = PauliSentence{T,N,Q}(s, iscopy=iscopy, check=check)
 function PauliSentence{T,N,Q}(
     paulis::AbstractVector{<:Unsigned},
     coeffs::AbstractVector{<:Number},
 ) where {T,N,Q}
     length(paulis) == length(coeffs) ||
         throw(DimensionMismatch("Length of paulis and coeffs must be the same."))
-    maximum(paulis) < 4^Q ||
-        throw(ArgumentError("Pauli string must not exceed $(4^Q - 1)."))
-    return PauliSentence{T,N,Q}(Dict(Pair.(paulis, coeffs)), iscopy=false)
+    _check_keys(paulis, Q)
+    return PauliSentence{T,N,Q}(Dict{T,N}(Pair.(paulis, coeffs)), iscopy=false, check=false)
 end
 PauliSentence{T,N}(
     paulis::AbstractVector{<:Unsigned},
@@ -111,12 +174,13 @@ function PauliSentence{T,N}(m::AbstractMatrix{<:Number}) where {T,N}
         ArgumentError("Matrix must be square and of size 2^Q x 2^Q for some integer Q."),
     )
     sentence = PauliSentence(Dict{T,N}(), Int(Q), iscopy=false)
-    for i in 0:x^2-1
+    for i in 0:(x^2-1)
         c = conj(tr(tomatrix(T(i), Int(Q)) * m') / x)
         abs(c) > eps(Float64) && (sentence[T(i)] = c)
     end
     return sentence
 end
 PauliSentence(m::AbstractMatrix{<:Number}) = PauliSentence{UInt,ComplexF64}(m)
-PauliSentence{T,N}(s::PauliSentence) where {T,N} = PauliSentence{T,N,s.qubits}(s.sentence)
+PauliSentence{T,N}(s::PauliSentence{<:Unsigned,<:Number,Q}) where {T,N,Q} =
+    PauliSentence{T,N,Q}(s.sentence, check=false)
 PauliSentence(s::PauliSentence) = copy(s)
