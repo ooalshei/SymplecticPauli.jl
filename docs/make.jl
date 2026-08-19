@@ -6,7 +6,6 @@ makedocs(
     sitename="SymplecticPauli.jl",
     modules=[SymplecticPauli],
     authors="Omar Alsheikh",
-    remotes=nothing,
     checkdocs=:exports,
     pages=[
         "Home" => "index.md",
@@ -23,3 +22,5 @@ makedocs(
         repolink="https://github.com/ooalshei/SymplecticPauli.jl",
     ),
 )
+
+deploydocs(repo="https://github.com/ooalshei/SymplecticPauli.jl", devbranch="main")

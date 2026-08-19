@@ -3,6 +3,8 @@
 [![Build Status](https://github.com/ooalshei/SymplecticPauli.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ooalshei/SymplecticPauli.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/ooalshei/SymplecticPauli.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ooalshei/SymplecticPauli.jl)
 [![Coverage](https://coveralls.io/repos/github/ooalshei/SymplecticPauli.jl/badge.svg?branch=main)](https://coveralls.io/github/ooalshei/SymplecticPauli.jl?branch=main)
+[![Docs stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://ooalshei.github.io/SymplecticPauli.jl/stable)
+[![Docs dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ooalshei.github.io/SymplecticPauli.jl/dev)
 
 Pauli operators as **symplectic bit strings** — products, commutators and rotations at the
 cost of a few machine instructions.
@@ -119,8 +121,11 @@ entered. Only the raw-bits constructor takes coefficients exactly as given.
 
 ## Documentation
 
-Full documentation, a manual and the API reference are built with
-[Documenter.jl](https://documenter.juliadocs.org):
+The manual and API reference are published with
+[Documenter.jl](https://documenter.juliadocs.org) at
+[ooalshei.github.io/SymplecticPauli.jl](https://ooalshei.github.io/SymplecticPauli.jl):
+`dev` follows `main`, and `stable` goes live with the first tagged release. To build them
+locally:
 
 ```julia
 julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
