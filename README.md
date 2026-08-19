@@ -114,7 +114,7 @@ A `PauliSentence` coefficient multiplies the **bare** embedding of its string â€
 $Z \mapsto \sigma_3$, and $Y \mapsto -i\sigma_2$, *i.e.*, the *real* antisymmetric representation. That is what makes a
 product of two strings an `xor` and a $\pm 1$, with no $i$ anywhere.
 
-Constructing a sentence from anything that names its strings folds in the $i^{\# Y}$ phase that
+Constructing a sentence from anything that names its strings folds in the $i^{\\# Y}$ phase that
 turns each bare string into the Hermitian Pauli operator, so a real coefficient vector gives
 a Hermitian operator, and `tostring` divides that phase back out â€” what you read is what you
 entered. Only the raw-bits constructor takes coefficients exactly as given.
