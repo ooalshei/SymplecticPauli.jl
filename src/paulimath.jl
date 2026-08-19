@@ -331,4 +331,4 @@ end
 ad!(s::PauliSentence, generators::PauliList, angles::AbstractVector{<:Real}; atol::Real=0) =
     ad!(s, generators, cos.(2 .* angles), sin.(2 .* angles), atol=atol)
 
-trace(s::PauliSentence) = haskey(s, 0) ? s[0] / 2^s.qubits : zero(eltype(s))
+trace(s::PauliSentence) = haskey(s, 0) ? 2^s.qubits * s[0] : zero(valtype(s))
