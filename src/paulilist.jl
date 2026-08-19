@@ -98,7 +98,7 @@ PauliList(v::AbstractVector{<:UPauli{T,Q}}) where {T,Q} = PauliList{T}(v)
 PauliList{T}(
     v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}},
 ) where {T} = PauliList{T,length(v[1])}(
-    map(x -> (x |> UPauli |> (y -> y.string)), v),
+    map(x -> UPauli{T}(x).string, v),
     iscopy=false,
     check=false,
 )

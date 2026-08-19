@@ -16,6 +16,8 @@ function _check_type(::Type{T}, s::Integer) where {T<:Unsigned}
     nothing
 end
 
+# The mask below is built in the string's own type: `2^Q - 1` is `Int` arithmetic and
+# overflows to `-1` at `Q = 64`, which would mask in the Z half as well.
 """
     countx(p), county(p), countz(p), counti(p)
 
@@ -38,8 +40,10 @@ julia> counti(UPauli("XZ--"))       # no Y: the plain identity count
 2
 ```
 """
-countx(string::Unsigned, Q::Integer) =
-    (_check_string_length(string, Q); count_ones(string & (2^Q - 1)))
+function countx(string::Unsigned, Q::Integer)
+    _check_string_length(string, Q)
+    return count_ones(string & ((one(string) << Q) - one(string)))
+end
 countx(p::AbstractPauli) = countx(p.string, p.qubits)
 
 county(string::Unsigned, Q::Integer) =

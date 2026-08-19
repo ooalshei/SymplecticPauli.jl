@@ -51,15 +51,17 @@ function UPauli{T}(p::AbstractString) where {T}
     Q = length(p)
     _check_type(T, Q)
     number = T(0)
+    # `one(T) << Q`, not `1 << Q`: an `Int` literal would promote the accumulator out of `T`
+    # and overflow the shift for every type narrower than `Int`.
     for char in Iterators.reverse(p)
         number <<= 1
         if char == 'X'
-            number |= 1
+            number |= one(T)
         elseif char == 'Z'
-            number |= (1 << Q)
+            number |= (one(T) << Q)
         elseif char == 'Y'
-            number |= (1 << Q)
-            number |= 1
+            number |= (one(T) << Q)
+            number |= one(T)
         end
     end
     return UPauli{T,Q}(number)
@@ -73,12 +75,12 @@ function UPauli{T}(p::AbstractVector{<:Integer}) where {T}
     for ind in Iterators.reverse(p)
         number <<= 1
         if ind == 2
-            number |= 1
+            number |= one(T)
         elseif ind == 4
-            number |= (1 << Q)
+            number |= (one(T) << Q)
         elseif ind == 3
-            number |= (1 << Q)
-            number |= 1
+            number |= (one(T) << Q)
+            number |= one(T)
         end
     end
     UPauli{T,Q}(number)
