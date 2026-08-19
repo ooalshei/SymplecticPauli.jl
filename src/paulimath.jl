@@ -86,8 +86,15 @@ i.e. the `second` field of [`_symplectic_prod`](@ref) without forming the produc
 """
 @inline _prodsign(p::Unsigned, q::Unsigned, Q::Integer) = _mpow(count_ones((p >> Q) & q))
 
-Base.cis(p::UPauli{T,Q}, θ::Real) where {T,Q} =
-    PauliSentence{T,ComplexF64,Q}([T(0), p.string], [cos(θ), _ipow(county(p) + 1) * sin(θ)])
+function Base.cis(p::UPauli{T,Q}, θ::Real) where {T,Q}
+    # The identity is its own rotation axis: both terms land on the same key, and writing
+    # them as two entries would silently keep only the second.
+    iszero(p.string) && return PauliSentence{T,ComplexF64,Q}([T(0)], [cis(θ)])
+    return PauliSentence{T,ComplexF64,Q}(
+        [T(0), p.string],
+        [cos(θ), _ipow(county(p) + 1) * sin(θ)],
+    )
+end
 
 function Base.:+(s::PauliSentence{Ts,Ns,Q}, r::PauliSentence{Tr,Nr,Q}) where {Ts,Ns,Tr,Nr,Q}
     T = promote_type(Ts, Tr)
