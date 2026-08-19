@@ -128,7 +128,7 @@ The manual and API reference are published with
 locally:
 
 ```julia
-julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+julia --project=docs -e 'using Pkg; Pkg.instantiate()'
 julia --project=docs docs/make.jl
 ```
 
