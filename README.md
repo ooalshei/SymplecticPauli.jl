@@ -9,22 +9,22 @@
 Pauli operators as **symplectic bit strings** — products, commutators and rotations at the
 cost of a few machine instructions.
 
-A Pauli string on `Q` qubits is one unsigned integer of `2Q` bits. The low `Q` bits say which
-qubits carry an `X` factor, the high `Q` bits which carry a `Z`, and a qubit with both bits
-set carries a `Y`:
+A Pauli string on $Q$ qubits is one unsigned integer of $2Q$ bits. The low $Q$ bits say which
+qubits carry an $X$ factor, the high $Q$ bits which carry a $Z$, and a qubit with both bits
+set carries a $Y$:
 
-```
-P = P₁ ⊗ ⋯ ⊗ P_Q   ↔   (z | x),    (zⱼ, xⱼ) = (0,0), (0,1), (1,0), (1,1)  for  I, X, Z, Y
-```
+$$
+P = P_1 \otimes \dots \otimes P_Q   \leftrightarrow   (z | x),\quad (z_j, x_j) = (0,0),\ (0,1),\ (1,0),\ (1,1)\quad  \text{for} \quad  I, X, Z, Y
+$$
 
 Everything else follows. The product of two strings is an exclusive or,
 
-```
-PQ ∝ (z_P ⊻ z_Q | x_P ⊻ x_Q)
-```
+$$
+PQ \propto (z_P \veebar z_Q | x_P \veebar x_Q)
+$$
 
-its phase is `(-1)^(z_P · x_Q)` times a power of `i` counting the `Y`s, and the two strings
-commute exactly when the symplectic form `z_P · x_Q + x_P · z_Q` is even. A product is one
+its phase is $(-1)^{z_P \cdot x_Q}$ times a power of $i$ counting the $Y$s, and the two strings
+commute exactly when the symplectic form $z_P \cdot x_Q + x_P \cdot z_Q$ is even. A product is one
 `xor`; a commutation test is two `and`s, an `xor` and a popcount. No matrix is ever built —
 `tomatrix` exists for checking small cases, and that is all it is for.
 
@@ -59,7 +59,7 @@ length(H), H.qubits    # (5, 3)
 trace(H)               # 0.0
 ```
 
-Conjugating it by `exp(iθA)` is `ad`, which touches only the terms that anticommute with the
+Conjugating it by $e^{i\theta A}$ is `ad`, which touches only the terms that anticommute with the
 generator — one pass over the sentence, no matrix exponential:
 
 ```julia
@@ -91,11 +91,11 @@ maximum(abs(back[k] - get(H, k, 0.0im)) for k in keys(back))   # 5.6e-17
 | | |
 |:--|:--|
 | `UPauli` | one string, bits only |
-| `Pauli` | one string with a phase `±1, ±i` |
+| `Pauli` | one string with a phase $\pm 1,\ \pm i$ |
 | `PauliList` | an ordered list of strings — a generating set, an algebra |
 | `PauliSentence` | strings with coefficients — an operator |
 | `com` | commutation test, returning the product string with it |
-| `ad`, `ad!` | conjugation by `∏ⱼ exp(iθⱼAⱼ)` |
+| `ad`, `ad!` | conjugation by $\prod_j e^{i\theta_j A_j}$ |
 | `trace` | trace of an operator, without the matrix |
 | `countx`, `county`, `countz`, `counti` | bit counts on a string |
 | `tostring`, `tomatrix` | text and dense matrix, for reading and checking |
@@ -110,11 +110,11 @@ The integer type is a parameter: `UInt` covers 32 qubits, `UInt128` covers 64, a
 
 ## One convention to know
 
-A `PauliSentence` coefficient multiplies the **bare** embedding of its string — `X` ↦ `σ₁`,
-`Z` ↦ `σ₃`, and a `Y` position ↦ the *real* antisymmetric `-iσ₂`. That is what makes a
-product of two strings an `xor` and a `±1`, with no `i` anywhere.
+A `PauliSentence` coefficient multiplies the **bare** embedding of its string — $X \mapsto \sigma_1$,
+$Z \mapsto \sigma_3$, and $Y \mapsto -i\sigma_2$, *i.e.*, the *real* antisymmetric representation. That is what makes a
+product of two strings an `xor` and a $\pm 1$, with no $i$ anywhere.
 
-Constructing a sentence from anything that names its strings folds in the `i^#Y` phase that
+Constructing a sentence from anything that names its strings folds in the $i^{\# Y}$ phase that
 turns each bare string into the Hermitian Pauli operator, so a real coefficient vector gives
 a Hermitian operator, and `tostring` divides that phase back out — what you read is what you
 entered. Only the raw-bits constructor takes coefficients exactly as given.
@@ -134,16 +134,6 @@ julia --project=docs docs/make.jl
 
 then open `docs/build/index.html`. Every example in the documentation is executed during that
 build, and every docstring example is a doctest verified against the code.
-
-## Tests
-
-```julia
-julia --project=. -e 'using Pkg; Pkg.test()'
-```
-
-The suite runs one `@safetestset` per source file, and checks the algebra — products,
-commutators, phases, rotations — against the dense matrices `tomatrix` produces, exhaustively
-over every string on up to three qubits.
 
 ## Related
 
