@@ -295,8 +295,8 @@ function ad(
 ) where {Ts,Tg,Q}
     length(generators) == length(cosines) == length(sines) || throw(
         DimensionMismatch(
-            "Generators and angles need to be equal size ($(length(generators)),
-            $(length(cosines)), $(length(sines)))",
+            "Generators and angles must have equal lengths " *
+            "($(length(generators)), $(length(cosines)), $(length(sines))).",
         ),
     )
     # One conversion up front, then rotate in place: chaining the out-of-place `ad` would
@@ -319,8 +319,8 @@ function ad!(
 ) where {T,Q}
     length(generators) == length(cosines) == length(sines) || throw(
         DimensionMismatch(
-            "Generators and angles need to be equal size ($(length(generators)),
-            $(length(cosines)), $(length(sines)))",
+            "Generators and angles must have equal lengths " *
+            "($(length(generators)), $(length(cosines)), $(length(sines))).",
         ),
     )
     for i in reverse(eachindex(generators))

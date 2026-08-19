@@ -11,8 +11,12 @@ end
 function _check_type(::Type{T}, s::Integer) where {T<:Unsigned}
     Base.hastypemax(T) &&
         8 * sizeof(T) < 2 * s &&
-        throw(ArgumentError("String length cannot exceed $(4 * sizeof(T)). Consider using
-                            a larger unsigned integer type."))
+        throw(
+            ArgumentError(
+                "String length cannot exceed $(4 * sizeof(T)). " *
+                "Consider using a larger unsigned integer type.",
+            ),
+        )
     nothing
 end
 
