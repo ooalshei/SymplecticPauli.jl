@@ -91,13 +91,15 @@ end
     @test _check_string_length(typemax(UInt128), 64) === nothing
 end
 
+# The default storage type is `UInt`, which is 32 bits wide on a 32-bit platform, so the
+# expected text interpolates it rather than naming `UInt64`.
 @testset "show" begin
-    @test sprint(show, UPauli("XY-Z")) == "Pauli{UInt64}(XY-Z)"
+    @test sprint(show, UPauli("XY-Z")) == "Pauli{$UInt}(XY-Z)"
     @test sprint(show, UPauli{UInt16}("XY-Z")) == "Pauli{UInt16}(XY-Z)"
-    @test sprint(show, Pauli("Z")) == "Pauli{UInt64}((+)Z)"
-    @test sprint(show, Pauli("Z", -1)) == "Pauli{UInt64}((-)Z)"
-    @test sprint(show, Pauli("Z", im)) == "Pauli{UInt64}((i)Z)"
-    @test sprint(show, Pauli("Z", -im)) == "Pauli{UInt64}((-i)Z)"
+    @test sprint(show, Pauli("Z")) == "Pauli{$UInt}((+)Z)"
+    @test sprint(show, Pauli("Z", -1)) == "Pauli{$UInt}((-)Z)"
+    @test sprint(show, Pauli("Z", im)) == "Pauli{$UInt}((i)Z)"
+    @test sprint(show, Pauli("Z", -im)) == "Pauli{$UInt}((-i)Z)"
 end
 
 @testset "equality and hashing" begin
