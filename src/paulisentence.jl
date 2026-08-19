@@ -131,11 +131,11 @@ function PauliSentence{T,N}(
     paulis::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}},
     coeffs::AbstractVector{<:Number},
 ) where {T,N}
-    ps = Pauli.(paulis)
-    c = copy(coeffs)
-    for (i, p) in pairs(ps)
-        c[i] *= p.sign
-    end
+    ps = Pauli{T}.(paulis)
+    # The convention phase is `i` on every string with an odd number of `Y`s, so it has to
+    # widen the coefficients rather than be written back into a copy of them: a real vector
+    # in gives a complex vector out.
+    c = getfield.(ps, :sign) .* coeffs
     return PauliSentence{T,N,length(paulis[1])}(map(x -> x.string, ps), c)
 end
 PauliSentence(
@@ -151,10 +151,11 @@ PauliSentence{T,N}(
     paulis::AbstractMatrix{<:Integer},
     coeffs::AbstractVector{<:Number},
 ) where {T,N} = PauliSentence{T,N}(eachcol(paulis), coeffs)
-PauliSentence(
-    paulis::AbstractMatrix{<:Integer},
-    coeffs::AbstractVector{N},
-) where {N<:Number} = PauliSentence{UInt,N}(eachcol(paulis), coeffs)
+# Through the vector method rather than straight to `PauliSentence{UInt,N}`: the coefficient
+# type has to widen when the convention phase of a string is imaginary, and that is where
+# the widening lives.
+PauliSentence(paulis::AbstractMatrix{<:Integer}, coeffs::AbstractVector{<:Number}) =
+    PauliSentence(eachcol(paulis), coeffs)
 
 PauliSentence{T,N}(
     sentence::AbstractDict{
@@ -162,11 +163,12 @@ PauliSentence{T,N}(
         <:Number,
     },
 ) where {T,N} = PauliSentence{T,N}(collect(keys(sentence)), collect(values(sentence)))
-PauliSentence(sentence::AbstractDict{<:UPauli{T,Q},N}) where {T,N<:Number,Q} =
-    PauliSentence{T,N}(sentence)
 PauliSentence(
-    sentence::AbstractDict{<:Union{AbstractString,AbstractVector{<:Integer}},N},
-) where {N<:Number} = PauliSentence{UInt,N}(sentence)
+    sentence::AbstractDict{
+        <:Union{UPauli,AbstractString,AbstractVector{<:Integer}},
+        <:Number,
+    },
+) = PauliSentence(collect(keys(sentence)), collect(values(sentence)))
 function PauliSentence{T,N}(m::AbstractMatrix{<:Number}) where {T,N}
     (x, y) = size(m)
     Q = log2(x)
