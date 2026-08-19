@@ -1,6 +1,10 @@
 @doc raw"""
     PauliList(strings::AbstractVector{<:Unsigned}, Q)
     PauliList(text::AbstractVector{<:AbstractString})
+    PauliList(indices::AbstractVector{<:AbstractVector{<:Integer}})
+    PauliList(indices::AbstractMatrix{<:Integer})
+    PauliList(paulis::AbstractVector{<:UPauli})
+    PauliList{T,Q}()
     PauliList{T,Q}(undef, n)
 
 An ordered list of Pauli strings on `Q` qubits — an algebra, a generator set, a subalgebra.
@@ -8,6 +12,18 @@ An ordered list of Pauli strings on `Q` qubits — an algebra, a generator set, 
 Behaves as an `AbstractVector` of the raw bit strings, so `push!`, `append!`, `deleteat!`,
 indexing and iteration all work; `v[i:j]` returns another `PauliList`. Use
 [`tostring`](@ref) to read one back as text.
+
+Elements are the bare `T` bit patterns rather than [`UPauli`](@ref) objects: the qubit count
+is a property of the list, stored once, so a list of a million strings is a million
+integers. Wrap an element as `UPauli(v[i], v.qubits)` when a standalone string is needed.
+Only `Q` and the storage type `T` — chosen as in [`UPauli`](@ref), `UInt` by default — are
+part of the type; a list built from a matrix of `1`–`4` indices reads one string per
+*column*.
+
+Two keywords control what the constructor does with the vector it is handed. `check=false`
+skips verifying that every element fits in `2Q` bits, and `iscopy=false` takes ownership of
+the vector instead of copying it — both worth it in a hot loop that has just built the
+vector itself, and both unsafe otherwise.
 
 # Examples
 ```jldoctest
@@ -26,6 +42,14 @@ julia> tostring(push!(copy(v), UPauli("ZZZ").string))
  "XX-"
  "-YZ"
  "ZZZ"
+
+julia> tostring(PauliList([2 1; 2 3; 1 4]))     # one string per column
+2-element Vector{String}:
+ "XX-"
+ "-YZ"
+
+julia> tostring(UPauli(v[2], v.qubits))         # an element as a standalone string
+"-YZ"
 ```
 """
 struct PauliList{T<:Unsigned,Q} <: AbstractVector{T}
@@ -97,11 +121,8 @@ PauliList{T}(v::AbstractVector{<:UPauli}) where {T} =
 PauliList(v::AbstractVector{<:UPauli{T,Q}}) where {T,Q} = PauliList{T}(v)
 PauliList{T}(
     v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}},
-) where {T} = PauliList{T,length(v[1])}(
-    map(x -> UPauli{T}(x).string, v),
-    iscopy=false,
-    check=false,
-)
+) where {T} =
+    PauliList{T,length(v[1])}(map(x -> UPauli{T}(x).string, v), iscopy=false, check=false)
 
 PauliList(v::AbstractVector{<:Union{AbstractString,AbstractVector{<:Integer}}}) =
     PauliList{UInt}(v)

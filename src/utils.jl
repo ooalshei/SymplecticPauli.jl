@@ -1,13 +1,26 @@
-# The low `Q` bits of a symplectic string hold the X part and the high `Q` bits the Z part,
-# so a valid string occupies exactly `2Q` bits. Testing `string >> 2Q` instead of comparing
-# against `4^Q - 1` keeps the check to a single shift and stays correct when `2Q` reaches
-# (or exceeds) the width of the integer type, where `4^Q` would silently overflow.
-@inline _check_string_length(string::Unsigned, Q::Integer) = if iszero(string >> (2 * Q))
-    nothing
-else
-    throw(ArgumentError("String must not exceed $(big(4)^Q - 1)."))
-end
+"""
+    _check_string_length(string, Q)
 
+Throw unless `string` fits in the `2Q` bits a `Q`-qubit Pauli string occupies.
+
+The low `Q` bits of a symplectic string hold the X part and the high `Q` bits the Z part, so
+a valid string occupies exactly `2Q` bits. Testing `string >> 2Q` instead of comparing
+against `4^Q - 1` keeps the check to a single shift and stays correct when `2Q` reaches (or
+exceeds) the width of the integer type, where `4^Q` would silently overflow.
+"""
+@inline _check_string_length(string::Unsigned, Q::Integer) =
+    if iszero(string >> (2 * Q))
+        nothing
+    else
+        throw(ArgumentError("String must not exceed $(big(4)^Q - 1)."))
+    end
+
+"""
+    _check_type(T, Q)
+
+Throw unless the unsigned type `T` is wide enough for a `Q`-qubit string, i.e. has at least
+`2Q` bits. Types without a `typemax` are unbounded and always pass.
+"""
 function _check_type(::Type{T}, s::Integer) where {T<:Unsigned}
     Base.hastypemax(T) &&
         8 * sizeof(T) < 2 * s &&
@@ -23,15 +36,13 @@ end
 # The mask below is built in the string's own type: `2^Q - 1` is `Int` arithmetic and
 # overflows to `-1` at `Q = 64`, which would mask in the Z half as well.
 """
-    countx(p), county(p), countz(p), counti(p)
+    countx(p)
+    countx(string::Unsigned, Q)
 
-Bit counts of a Pauli string: how many qubits carry the `X` bit, the `Y` (both bits), the
-`Z` bit, and `Q` minus the three.
+Number of qubits of a Pauli string whose `X` bit is set.
 
-A `Y` sets both bits of its qubit, so it is counted by `countx` *and* `countz` as well as by
-`county`, and `counti` therefore subtracts it three times. `counti` is used as a weight
-ordering — larger means closer to the identity — rather than as a literal count of identity
-factors.
+A `Y` sets both bits of its qubit, so it is counted here as well as by [`countz`](@ref) and
+[`county`](@ref): `countx` is the number of `X` *and* `Y` factors.
 
 # Examples
 ```jldoctest
@@ -40,7 +51,7 @@ julia> p = UPauli("XY-Z");
 julia> countx(p), county(p), countz(p), counti(p)
 (2, 1, 2, -1)
 
-julia> counti(UPauli("XZ--"))       # no Y: the plain identity count
+julia> countx(p.string, p.qubits)
 2
 ```
 """
@@ -50,20 +61,74 @@ function countx(string::Unsigned, Q::Integer)
 end
 countx(p::AbstractPauli) = countx(p.string, p.qubits)
 
+"""
+    county(p)
+    county(string::Unsigned, Q)
+
+Number of `Y` factors of a Pauli string — the qubits with both bits set.
+
+This is the exponent of the ``i^{\\#Y}`` phase that separates the bare symplectic string
+from the Hermitian Pauli operator, so it turns up wherever a phase does: [`Pauli`](@ref),
+[`PauliSentence`](@ref) coefficients, [`tostring`](@ref).
+
+# Examples
+```jldoctest
+julia> county(UPauli("XY-Z")), county(UPauli("YYY-"))
+(1, 3)
+
+julia> Pauli(UPauli("YYY-")).sign == im^county(UPauli("YYY-"))
+true
+```
+"""
 county(string::Unsigned, Q::Integer) =
     (_check_string_length(string, Q); count_ones(string & (string >> Q)))
 county(p::AbstractPauli) = county(p.string, p.qubits)
 
+"""
+    countz(p)
+    countz(string::Unsigned, Q)
+
+Number of qubits of a Pauli string whose `Z` bit is set — the number of `Z` *and* `Y`
+factors, for the same reason as [`countx`](@ref).
+
+# Examples
+```jldoctest
+julia> countz(UPauli("XY-Z"))
+2
+```
+"""
 countz(string::Unsigned, Q::Integer) =
     (_check_string_length(string, Q); count_ones(string >> Q))
 countz(p::AbstractPauli) = countz(p.string, p.qubits)
 
+"""
+    counti(p)
+    counti(string::Unsigned, Q)
+
+`Q` minus [`countx`](@ref), [`county`](@ref) and [`countz`](@ref).
+
+Since a `Y` is counted by all three, it is subtracted three times and the result can go
+negative: `counti` is a weight ordering — larger means closer to the identity, and a `Y`
+costs more than an `X` or a `Z` — rather than a literal count of identity factors. For a
+string with no `Y`s it *is* that count.
+
+# Examples
+```jldoctest
+julia> counti(UPauli("XZ--"))       # no Y: the plain identity count
+2
+
+julia> counti(UPauli("XY-Z"))       # the Y is subtracted three times
+-1
+```
+"""
 counti(string::Unsigned, Q::Integer) =
     Q - countx(string, Q) - county(string, Q) - countz(string, Q)
 counti(p::AbstractPauli) = counti(p.string, p.qubits)
 
 """
-    tostring(x)
+    tostring(p::AbstractPauli)
+    tostring(v::PauliList)
+    tostring(s::PauliSentence)
 
 Human-readable form of a Pauli string, list or sentence: `X`, `Y`, `Z` and `-`, leftmost
 qubit first.
@@ -120,14 +185,16 @@ end
 tostring(v::PauliList) = tostring.(UPauli.(v.strings, v.qubits))
 
 @doc raw"""
-    tomatrix(x)
+    tomatrix(p::AbstractPauli)
+    tomatrix(s::PauliSentence)
+    tomatrix(string::Unsigned, Q)
 
 Dense ``2^Q \times 2^Q`` matrix of a Pauli string or sentence.
 
 `tomatrix(string, Q)` gives the *bare* embedding — `X` ↦ ``σ_1``, `Z` ↦ ``σ_3``, a `Y`
 position ↦ the real antisymmetric ``σ_2`` — which is what [`PauliSentence`](@ref)
-coefficients multiply. `tomatrix` of a [`Pauli`](@ref) or [`UPauli`](@ref) includes the phase
-that makes it the Hermitian Pauli operator.
+coefficients multiply. `tomatrix` of a [`Pauli`](@ref) or [`UPauli`](@ref) includes the
+phase that makes it the Hermitian Pauli operator.
 
 Exponential in `Q`: for checking small cases, not for computing with.
 

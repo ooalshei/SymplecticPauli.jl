@@ -1,16 +1,38 @@
 @doc raw"""
-    PauliSentence(strings, coefficients, Q)
+    PauliSentence(strings::AbstractVector{<:Unsigned}, coefficients, Q)
     PauliSentence(v::PauliList, coefficients)
+    PauliSentence(text::AbstractVector{<:AbstractString}, coefficients)
+    PauliSentence(paulis::AbstractVector{<:UPauli}, coefficients)
+    PauliSentence(d::AbstractDict)
     PauliSentence(m::AbstractMatrix)
 
 An operator: Pauli strings with coefficients, behaving as an `AbstractDict` from string to
 coefficient.
 
+```math
+\mathcal{S} = \sum_j c_j P_j ,
+```
+
+with the keys the symplectic bit patterns of the ``P_j`` and the values the ``c_j``. The
+`Base` dictionary vocabulary applies — `get`, `haskey`, `setindex!`, `delete!`, `filter!`,
+iteration over `key => value` pairs — and on top of it `+`, `-`, scalar and operator `*`,
+integer powers, [`ad`](@ref) and [`trace`](@ref).
+
+# Phase convention
+
 Coefficients multiply the *bare* embedding of their string (`X` ↦ ``σ_1``, `Z` ↦ ``σ_3``,
-`Y` position ↦ the real antisymmetric ``σ_2``), so building one from a
-[`PauliList`](@ref) folds in the ``i^{\#Y}`` phase that makes each term Hermitian — a real
-coefficient vector gives a Hermitian operator. [`tomatrix`](@ref) inverts the
-representation, and constructing from a matrix decomposes it into Paulis.
+`Y` position ↦ the real antisymmetric [`σ₂real`](@ref)), which is what makes a product of
+two strings a matter of `⊻` and a ``\pm 1``. Constructing from anything that names its
+strings — a [`PauliList`](@ref), text, [`UPauli`](@ref)s — folds in the ``i^{\#Y}`` phase
+that turns each bare string into the Hermitian Pauli operator, so a real coefficient vector
+gives a Hermitian operator, and [`tostring`](@ref) divides that phase back out. Only the
+raw-bits constructor takes the coefficients exactly as given.
+
+The element types follow the same pattern as [`UPauli`](@ref) and [`PauliList`](@ref):
+`PauliSentence{T,N,Q}` stores keys of type `T` and coefficients of type `N`, both inferred
+from the arguments unless written out. [`tomatrix`](@ref) inverts the representation, and
+constructing from a matrix decomposes it into Paulis — at a cost exponential in `Q`, for
+checking small cases.
 
 # Examples
 ```jldoctest
@@ -28,6 +50,13 @@ julia> tomatrix(H)
   0.0+0.0im  -1.0+0.0im   0.0+0.0im  -0.5+0.0im
  -0.5+0.0im   0.0+0.0im  -1.0+0.0im   0.0+0.0im
   0.0+0.0im  -0.5+0.0im   0.0+0.0im   1.0+0.0im
+
+julia> tomatrix(H) ≈ tomatrix(H)'      # real coefficients, Hermitian operator
+true
+
+julia> tostring(PauliSentence(["YY"], [2.0]))   # the i² of the two Ys folds in and back out
+Dict{String, Float64} with 1 entry:
+  "YY" => 2.0
 ```
 """
 struct PauliSentence{T<:Unsigned,N<:Number,Q} <: AbstractDict{T,N}
@@ -50,11 +79,20 @@ struct PauliSentence{T<:Unsigned,N<:Number,Q} <: AbstractDict{T,N}
     end
 end
 
-_check_keys(ks, Q::Integer) = if all(k -> iszero(k >> (2 * Q)), ks)
-    nothing
-else
-    throw(ArgumentError("String must not exceed $(big(4)^Q - 1)."))
-end
+"""
+    _check_keys(ks, Q)
+
+Throw unless every key in `ks` fits in the `2Q` bits a `Q`-qubit string occupies.
+
+The shift test is the same one [`_check_string_length`](@ref) makes for a single string, and
+is skipped by the `check=false` path of the constructors.
+"""
+_check_keys(ks, Q::Integer) =
+    if all(k -> iszero(k >> (2 * Q)), ks)
+        nothing
+    else
+        throw(ArgumentError("String must not exceed $(big(4)^Q - 1)."))
+    end
 
 Base.show(io::IO, s::PauliSentence) = print(io, tostring(s))
 Base.iterate(s::PauliSentence, i=1) = iterate(s.sentence, i)
