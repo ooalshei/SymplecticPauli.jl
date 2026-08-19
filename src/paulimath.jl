@@ -7,7 +7,8 @@ const _IPOWERS = (C8(1), C8(im), C8(-1), C8(-im))
 @inline _mpow(k::Integer) = ifelse(isodd(k), C8(-1), C8(1))
 
 Base.:*(scalar::Number, p::UPauli) = Pauli(p, _ipow(county(p)) * scalar)
-Base.:*(scalar::Number, p::Pauli) = Pauli(p.string, p.sign * scalar)
+Base.:*(scalar::Number, p::Pauli) = Pauli(p.string, p.sign * scalar, p.qubits)
+Base.:*(p::AbstractPauli, scalar::Number) = scalar * p
 
 unsigned_prod(p::UPauli{<:Unsigned,Q}, q::UPauli{<:Unsigned,Q}) where {Q} =
     UPauli(p.string ⊻ q.string, Q)
