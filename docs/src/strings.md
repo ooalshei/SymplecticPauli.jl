@@ -124,9 +124,10 @@ p = UPauli("XY-Z")
 countx(p), county(p), countz(p), counti(p)
 ```
 
-`counti` is `Q` minus the other three, which subtracts a `Y` three times over. It is a weight
-ordering — larger means closer to the identity — rather than a literal count of identity
-factors, and for a string with no `Y`s the two coincide.
+`counti` is the odd one out: it folds the two halves together first, so a `Y` counts as one
+non-identity qubit like any other factor, and the result is the number of identity factors
+the printed string shows. `Q - counti(p)` is the weight of the string — the number of qubits
+it acts on — so sorting by `counti` orders strings from the identity outwards.
 
 ## Lists of strings
 

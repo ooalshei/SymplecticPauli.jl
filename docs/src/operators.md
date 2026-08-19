@@ -76,7 +76,7 @@ length(filter(p -> p.second > 0.9, H))
 ```
 
 ```@example operators
-sum(counti(k, H.qubits) for k in keys(H))     # a crude weight of the Hamiltonian
+sum(H.qubits - counti(k, H.qubits) for k in keys(H))   # total weight of the Hamiltonian
 ```
 
 `copy`, `empty`, `delete!`, `pop!`, `filter!`, `sizehint!` and iteration over `key => value`

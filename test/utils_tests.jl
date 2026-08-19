@@ -7,15 +7,15 @@ using Test
 allstrings(Q) = UInt.(0:(4^Q-1))
 
 # A `Y` sets both the X and the Z bit of its qubit, so it is counted by `countx` and by
-# `countz` as well as by `county`; `counti` is `Q` minus the three, which weighs a `Y`
-# three times over. Downstream weight orderings rely on that convention, so it is pinned
-# here rather than reinterpreted.
+# `countz` as well as by `county`. `counti` is the odd one out: it folds the two halves
+# together, so a `Y` is one non-identity qubit like any other factor and the count is the
+# number of identity factors the printed string shows.
 @testset "counting" begin
     p = UPauli("XYZI-")
     @test countx(p) == 2
     @test county(p) == 1
     @test countz(p) == 2
-    @test counti(p) == 5 - 2 - 1 - 2
+    @test counti(p) == 2                              # the I and the - of "XYZI-"
     @test countx(p.string, p.qubits) == countx(p)
     @test county(p.string, p.qubits) == county(p)
     @test countz(p.string, p.qubits) == countz(p)
@@ -26,11 +26,15 @@ allstrings(Q) = UInt.(0:(4^Q-1))
         @test countx(s, Q) == count(∈("XY"), chars)
         @test county(s, Q) == count(==('Y'), chars)
         @test countz(s, Q) == count(∈("ZY"), chars)
-        @test counti(s, Q) == Q - countx(s, Q) - county(s, Q) - countz(s, Q)
+        @test counti(s, Q) == count(==('-'), chars)
+        # …which is `Q` minus the weight, and the three halves-counts overcount a `Y` once.
+        @test counti(s, Q) ==
+              Q - countx(s, Q) - countz(s, Q) + county(s, Q)
     end
     @test_throws ArgumentError countx(UInt(4), 1)
     @test_throws ArgumentError county(UInt(4), 1)
     @test_throws ArgumentError countz(UInt(4), 1)
+    @test_throws ArgumentError counti(UInt(4), 1)
     # The masks have to be built in the string's own type: an `Int` one overflows at Q = 64.
     wide = UPauli(typemax(UInt128), 64)
     @test countx(wide) == 64
@@ -38,6 +42,8 @@ allstrings(Q) = UInt.(0:(4^Q-1))
     @test countz(wide) == 64
     @test countx(UPauli(UInt128(1) << 64, 64)) == 0   # a lone Z on the last qubit
     @test countz(UPauli(UInt128(1) << 64, 64)) == 1
+    @test counti(wide) == 0                           # every qubit carries a Y
+    @test counti(UPauli(UInt128(0), 64)) == 64
 end
 
 @testset "tostring" begin

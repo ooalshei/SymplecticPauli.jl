@@ -42,14 +42,15 @@ end
 Number of qubits of a Pauli string whose `X` bit is set.
 
 A `Y` sets both bits of its qubit, so it is counted here as well as by [`countz`](@ref) and
-[`county`](@ref): `countx` is the number of `X` *and* `Y` factors.
+[`county`](@ref): `countx` is the number of `X` *and* `Y` factors. [`counti`](@ref) folds the
+two halves together instead, and counts a `Y` once.
 
 # Examples
 ```jldoctest
 julia> p = UPauli("XY-Z");
 
 julia> countx(p), county(p), countz(p), counti(p)
-(2, 1, 2, -1)
+(2, 1, 2, 1)
 
 julia> countx(p.string, p.qubits)
 2
@@ -105,24 +106,32 @@ countz(p::AbstractPauli) = countz(p.string, p.qubits)
     counti(p)
     counti(string::Unsigned, Q)
 
-`Q` minus [`countx`](@ref), [`county`](@ref) and [`countz`](@ref).
+Number of identity factors of a Pauli string — the qubits with neither bit set.
 
-Since a `Y` is counted by all three, it is subtracted three times and the result can go
-negative: `counti` is a weight ordering — larger means closer to the identity, and a `Y`
-costs more than an `X` or a `Z` — rather than a literal count of identity factors. For a
-string with no `Y`s it *is* that count.
+`Q` minus this is the *weight* of the string, the number of qubits it acts on, so sorting by
+`counti` orders strings from the identity outwards. Unlike the other three counts it is not a
+popcount of one half: a `Y` is one non-identity qubit even though it sets two bits, so the
+two halves are folded together before counting.
 
 # Examples
 ```jldoctest
-julia> counti(UPauli("XZ--"))       # no Y: the plain identity count
+julia> counti(UPauli("XZ--"))
 2
 
-julia> counti(UPauli("XY-Z"))       # the Y is subtracted three times
--1
+julia> counti(UPauli("XY-Z"))       # a Y counts once, like any other factor
+1
+
+julia> counti(UPauli("----")), counti(UPauli("YYYY"))
+(4, 0)
 ```
 """
-counti(string::Unsigned, Q::Integer) =
-    Q - countx(string, Q) - county(string, Q) - countz(string, Q)
+function counti(string::Unsigned, Q::Integer)
+    _check_string_length(string, Q)
+    mask = (one(string) << Q) - one(string)
+    # A qubit is an identity when neither of its bits is set, so OR the two halves together
+    # and count what is left: a `Y` is one non-identity qubit, not two or three.
+    return Q - count_ones((string | (string >> Q)) & mask)
+end
 counti(p::AbstractPauli) = counti(p.string, p.qubits)
 
 """
