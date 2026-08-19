@@ -32,7 +32,7 @@ commute exactly when the symplectic form $z_P \cdot x_Q + x_P \cdot z_Q$ is even
 
 ```julia
 using Pkg
-Pkg.add("ymplecticPauli")
+Pkg.add("SymplecticPauli")
 ```
 
 ## Example
