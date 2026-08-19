@@ -35,11 +35,9 @@ it is for.
 
 ## Installation
 
-The package is not registered:
-
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/ooalshei/SymplecticPauli.jl")
+Pkg.add("SymplecticPauli")
 ```
 
 ## Quick start

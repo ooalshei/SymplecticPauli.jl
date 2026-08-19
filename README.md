@@ -30,11 +30,9 @@ commute exactly when the symplectic form $z_P \cdot x_Q + x_P \cdot z_Q$ is even
 
 ## Installation
 
-The package is not registered:
-
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/ooalshei/SymplecticPauli.jl")
+Pkg.add("ymplecticPauli")
 ```
 
 ## Example
